@@ -1,56 +1,103 @@
-/* adminportal.css */
-.admin-portal {
-    display: flex;
-    height: 100vh;
-  }
-  
-  .sidebar {
+/* Sidebar Styling */
+.sider {
     width: 250px;
-    background-color: #333;
-    color: white;
+    background-color: white;  /* Set sidebar background color to white */
+    color: black;  /* Change text color to black for better contrast */
     padding-top: 20px;
     position: fixed;
     height: 100vh;
     box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.1);
-  }
-  
-  .sidebar-header {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Sidebar header */
+.sider-header {
     text-align: center;
     margin-bottom: 20px;
-  }
-  
-  .sidebar-links a {
+    background-color: #f0f0f0;  /* Set background color to gray */
+    padding: 10px 0;  /* Optional: adds some padding around the header */
+}
+
+/* Sidebar links */
+.sider-links {
+    overflow-y: auto;  /* Enable vertical scrolling */
+    flex-grow: 1;  /* Allow the links to take available space */
+    padding-bottom: 20px;  /* Optional: for some spacing at the bottom */
+}
+
+/* Sidebar links styling */
+.sider-links a {
     display: block;
-    color: white;
+    color: black;  /* Set text color to black */
     text-decoration: none;
-    padding: 10px 20px;
+    padding: 12px 20px;
     font-size: 18px;
-  }
-  
-  .sidebar-links a:hover {
-    background-color: #575757;
-  }
-  
-  .logout-btn {
-    background-color: #f56c6c;
+    transition: background-color 0.3s ease, color 0.3s ease;  /* Add color transition */
+}
+
+/* Hover effect on sidebar links */
+.sider-links a:hover {
+    background-color: #FFA015;  /* Change background to #FFA015 on hover */
+    color: white;  /* Change text color to white on hover */
+}
+
+/* Active link styling */
+.sider-links a.active {
+    background-color: #FFA015;  /* Active link background color */
+    color: white;  /* Active link text color */
+}
+
+/* Logout button styling */
+.logout-btn {
+    background-color: #d13636;  /* Set logout button background color to red */
     color: white;
     border: none;
-    padding: 10px 20px;
+    padding: 12px;
     width: 100%;
     margin-top: auto;
-  }
-  
-  .main-content {
+    margin-bottom: 1rem; /* Added margin-bottom of 1rem */
+    margin-top: 1rem;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+/* Hover effect on logout button */
+.logout-btn:hover {
+    background-color: rgb(177, 53, 53);  /* Darken red color on hover */
+}
+
+/* Main content layout */
+.main-content {
     margin-left: 250px;
     padding: 20px;
     width: calc(100% - 250px);
-  }
-  
-  .products-dropdown .ant-dropdown-link {
-    color: white;
-  }
-  
-  h1 {
+    font-family: Arial, sans-serif;
+}
+
+/* Content heading styling */
+.content-heading {
+    font-size: 28px;
     color: #333;
-  }
-  
+    margin-bottom: 20px;
+    text-transform: capitalize;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .admin-portal {
+        flex-direction: column;
+    }
+
+    .sider {
+        width: 100%;
+        height: auto;
+        position: static;
+    }
+
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+}
