@@ -1,33 +1,37 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { DownOutlined, UpOutlined } from "@ant-design/icons";  // Importing the down and up icons
+import { DownOutlined, UpOutlined, LogoutOutlined } from "@ant-design/icons";
 import Dashboard from "./dashboard";
 import Products from "./product";
 import Categories from "./categories";
 import Quote from "./getaquote";
-import Portfolio from "./portfolio";  // Placeholder for Portfolio
-import ProductSorting from "./productsorting";  // Placeholder for Product Sorting
-import SearchTracker from "./searchtracker";  // Placeholder for Search Tracker
-import Testimonial from "./testimonial";  // Placeholder for Testimonial
-import Faqs from "./faqs";  // Placeholder for FAQs
-import Blog from "./blogs/blogs";  // Placeholder for Blogs
-import Blogcategory from "./blogs/blogcategory";  // Placeholder for Blog Categories
-import About from "./about";  // Placeholder for About
-import TermsConditions from "./terms";  // Placeholder for Terms and Conditions
-import PrivacyPolicy from "./privacy";  // Placeholder for Privacy Policy
-import { LogoutOutlined } from "@ant-design/icons";
-import "./sider.css"; // Import your custom CSS
+import Portfolio from "./portfolio";
+import ProductSorting from "./productsorting";
+import SearchTracker from "./searchtracker";
+import Testimonial from "./testimonial";
+import Faqs from "./faqs";
+import Blog from "./blogs/blogs";
+import Blogcategory from "./blogs/blogcategory";
+import About from "./about";
+import TermsConditions from "./terms";
+import PrivacyPolicy from "./privacy";
+import "./sider.css";
 
 const AdminPortal = () => {
   const [activeContent, setActiveContent] = useState("Dashboard");
-  const [activeTab, setActiveTab] = useState("Blogs"); // State for the active tab in Blog Management
-  const [isBlogManagementOpen, setIsBlogManagementOpen] = useState(false);  // State to toggle Blog Management tabs
-  const navigate = useNavigate(); // Initialize useNavigate
-  
-  // Hardcoded username instead of fetching from localStorage
-  const username = "Sire Khan"; // Hardcoded username
+  const [activeTab, setActiveTab] = useState("Blogs");
+  const [isBlogManagementOpen, setIsBlogManagementOpen] = useState(false);
+  const [username, setUsername] = useState("User"); // Default user
+  const navigate = useNavigate();
 
-  // Function to render the active content
+  // Fetch the username from localStorage on component mount
+  useEffect(() => {
+    const storedUsername = localStorage.getItem("username");
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
+  }, []);
+
   const renderContent = () => {
     switch (activeContent) {
       case "Dashboard":
@@ -51,7 +55,6 @@ const AdminPortal = () => {
       case "Blog Management":
         return (
           <div>
-            {/* Render the correct content based on the active tab */}
             <div className="blog-tabs">
               <a
                 className={activeTab === "Blogs" ? "active-tab" : ""}
@@ -81,13 +84,14 @@ const AdminPortal = () => {
   };
 
   const handleLogout = () => {
-    // Remove token from localStorage
+    // Remove token and username from localStorage
     localStorage.removeItem("token");
+    localStorage.removeItem("username");
+
     // Redirect to login page
     navigate("/login");
   };
 
-  // Toggle the Blog Management tab (expand/collapse)
   const toggleBlogManagement = () => {
     setIsBlogManagementOpen((prev) => !prev);
   };
@@ -97,10 +101,24 @@ const AdminPortal = () => {
       {/* Sidebar */}
       <div className="sider">
         <div className="sider-header">
-          <h3 style={{ fontStyle: "italic" }}>Hi, {username}</h3> {/* Direct text display */}
+          <h3 style={{ fontStyle: "italic" }}>Hi, {username}</h3>{" "}
+          {/* Dynamic username */}
         </div>
         <nav className="sider-links">
-          {["Dashboard", "Products", "Categories", "Get a Quote", "Portfolio", "Product Sorting", "Search Tracker", "Testimonial", "FAQs", "About", "Terms and Conditions", "Privacy Policy"].map((item) => (
+          {[
+            "Dashboard",
+            "Products",
+            "Categories",
+            "Get a Quote",
+            "Portfolio",
+            "Product Sorting",
+            "Search Tracker",
+            "Testimonial",
+            "FAQs",
+            "About",
+            "Terms and Conditions",
+            "Privacy Policy",
+          ].map((item) => (
             <a
               key={item}
               className={activeContent === item ? "active" : ""}
@@ -109,21 +127,20 @@ const AdminPortal = () => {
               {item}
             </a>
           ))}
-          
+
           {/* Blog Management Tab */}
           <div className="blog-management">
             <a
               className={activeContent === "Blog Management" ? "active" : ""}
               onClick={() => {
                 setActiveContent("Blog Management");
-                toggleBlogManagement();  // Toggle sub-tabs when clicked
+                toggleBlogManagement();
               }}
             >
               Blog Management
-              {isBlogManagementOpen ? <UpOutlined /> : <DownOutlined />}  {/* Switch icon based on state */}
+              {isBlogManagementOpen ? <UpOutlined /> : <DownOutlined />}
             </a>
-            
-            {/* Show the sub-tabs under Blog Management */}
+
             {isBlogManagementOpen && (
               <div className="blog-tabs">
                 <a
@@ -133,7 +150,9 @@ const AdminPortal = () => {
                   Blogs
                 </a>
                 <a
-                  className={activeTab === "Blog Categories" ? "active-tab" : ""}
+                  className={
+                    activeTab === "Blog Categories" ? "active-tab" : ""
+                  }
                   onClick={() => setActiveTab("Blog Categories")}
                 >
                   Blog Categories
