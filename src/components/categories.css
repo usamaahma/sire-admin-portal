@@ -1,0 +1,6 @@
+/* In your CSS file */
+.ant-form-item-label > label {
+    text-align: left !important;
+    font-weight: bold !important;
+  }
+  

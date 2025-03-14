@@ -1,10 +1,15 @@
+import React from "react";
+import { BrowserRouter } from "react-router-dom";  // Import BrowserRouter
+import AdminPortal from "./components/sider";  // Your Admin Portal Component
 import "./App.css";
 
 function App() {
   return (
-    <div className="App">
-      <h1>Sire Printing Admin Portal</h1>
-    </div>
+    <BrowserRouter>  {/* Wrap the entire app in BrowserRouter */}
+      <div className="App">
+        <AdminPortal />  {/* Your Admin Portal */}
+      </div>
+    </BrowserRouter>
   );
 }
 
