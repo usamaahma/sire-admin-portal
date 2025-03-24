@@ -1,5 +1,4 @@
 import axios from "axios";
-
 const baseURL = process.env.REACT_APP_API_URL; // Make sure your .env file is correctly set
 
 // Create instances with consistent base URLs for each service
@@ -20,7 +19,7 @@ const errorInterceptor = (err) => {
 };
 
 // Apply interceptors for each axios instance
- 
+
 product.interceptors.request.use(requestInterceptor, errorInterceptor);
 
 export { product };
