@@ -1,33 +1,54 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { DownOutlined, UpOutlined } from "@ant-design/icons";  // Importing the down and up icons
+import {
+  DownOutlined,
+  UpOutlined,
+  LogoutOutlined,
+  DashboardOutlined,
+  ShoppingOutlined,
+  AppstoreOutlined,
+  FormOutlined,
+  PictureOutlined,
+  SortAscendingOutlined,
+  SearchOutlined,
+  MessageOutlined,
+  QuestionCircleOutlined,
+  ReadOutlined,
+  FolderOutlined,
+  InfoCircleOutlined,
+  FileTextOutlined,
+  LockOutlined,
+} from "@ant-design/icons";
 import Dashboard from "./dashboard";
 import Products from "./product";
 import Categories from "./categories";
 import Quote from "./getaquote";
-import Portfolio from "./portfolio";  // Placeholder for Portfolio
-import ProductSorting from "./productsorting";  // Placeholder for Product Sorting
-import SearchTracker from "./searchtracker";  // Placeholder for Search Tracker
-import Testimonial from "./testimonial";  // Placeholder for Testimonial
-import Faqs from "./faqs";  // Placeholder for FAQs
-import Blog from "./blogs/blogs";  // Placeholder for Blogs
-import Blogcategory from "./blogs/blogcategory";  // Placeholder for Blog Categories
-import About from "./about";  // Placeholder for About
-import TermsConditions from "./terms";  // Placeholder for Terms and Conditions
-import PrivacyPolicy from "./privacy";  // Placeholder for Privacy Policy
-import { LogoutOutlined } from "@ant-design/icons";
-import "./sider.css"; // Import your custom CSS
+import Portfolio from "./portfolio";
+import ProductSorting from "./productsorting";
+import SearchTracker from "./searchtracker";
+import Testimonial from "./testimonial";
+import Faqs from "./faqs";
+import Blog from "./blogs/blogs";
+import Blogcategory from "./blogs/blogcategory";
+import About from "./about";
+import TermsConditions from "./terms";
+import PrivacyPolicy from "./privacy";
+import "./sider.css";
 
 const AdminPortal = () => {
   const [activeContent, setActiveContent] = useState("Dashboard");
-  const [activeTab, setActiveTab] = useState("Blogs"); // State for the active tab in Blog Management
-  const [isBlogManagementOpen, setIsBlogManagementOpen] = useState(false);  // State to toggle Blog Management tabs
-  const navigate = useNavigate(); // Initialize useNavigate
-  
-  // Hardcoded username instead of fetching from localStorage
-  const username = "Sire Khan"; // Hardcoded username
+  const [activeTab, setActiveTab] = useState("Blogs");
+  const [isBlogManagementOpen, setIsBlogManagementOpen] = useState(false);
+  const [username, setUsername] = useState("User");
+  const navigate = useNavigate();
 
-  // Function to render the active content
+  useEffect(() => {
+    const storedUsername = localStorage.getItem("username");
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
+  }, []);
+
   const renderContent = () => {
     switch (activeContent) {
       case "Dashboard":
@@ -42,31 +63,36 @@ const AdminPortal = () => {
         return <Portfolio />;
       case "Product Sorting":
         return <ProductSorting />;
-      case "Search Tracker":
-        return <SearchTracker />;
+      // case "Search Tracker":
+      //   return <SearchTracker />;
       case "Testimonial":
         return <Testimonial />;
       case "FAQs":
         return <Faqs />;
       case "Blog Management":
         return (
-          <div>
-            {/* Render the correct content based on the active tab */}
+          <div className="blog-content-container">
             <div className="blog-tabs">
-              <a
-                className={activeTab === "Blogs" ? "active-tab" : ""}
+              <button
+                className={`tab-button ${
+                  activeTab === "Blogs" ? "active-tab" : ""
+                }`}
                 onClick={() => setActiveTab("Blogs")}
               >
-                Blogs
-              </a>
-              <a
-                className={activeTab === "Blog Categories" ? "active-tab" : ""}
+                <ReadOutlined /> Blogs
+              </button>
+              <button
+                className={`tab-button ${
+                  activeTab === "Blog Categories" ? "active-tab" : ""
+                }`}
                 onClick={() => setActiveTab("Blog Categories")}
               >
-                Blog Categories
-              </a>
+                <FolderOutlined /> Blog Categories
+              </button>
             </div>
-            {activeTab === "Blogs" ? <Blog /> : <Blogcategory />}
+            <div className="tab-content">
+              {activeTab === "Blogs" ? <Blog /> : <Blogcategory />}
+            </div>
           </div>
         );
       case "About":
@@ -81,77 +107,116 @@ const AdminPortal = () => {
   };
 
   const handleLogout = () => {
-    // Remove token from localStorage
     localStorage.removeItem("token");
-    // Redirect to login page
+    localStorage.removeItem("username");
     navigate("/login");
   };
 
-  // Toggle the Blog Management tab (expand/collapse)
   const toggleBlogManagement = () => {
     setIsBlogManagementOpen((prev) => !prev);
+    if (!isBlogManagementOpen) {
+      setActiveContent("Blog Management");
+    }
   };
+
+  const menuItems = [
+    { name: "Dashboard", icon: <DashboardOutlined /> },
+    { name: "Products", icon: <ShoppingOutlined /> },
+    { name: "Categories", icon: <AppstoreOutlined /> },
+    { name: "Get a Quote", icon: <FormOutlined /> },
+    { name: "Portfolio", icon: <PictureOutlined /> },
+    { name: "Product Sorting", icon: <SortAscendingOutlined /> },
+    // { name: "Search Tracker", icon: <SearchOutlined /> },
+    { name: "Testimonial", icon: <MessageOutlined /> },
+    { name: "FAQs", icon: <QuestionCircleOutlined /> },
+    { name: "About", icon: <InfoCircleOutlined /> },
+    { name: "Terms and Conditions", icon: <FileTextOutlined /> },
+    { name: "Privacy Policy", icon: <LockOutlined /> },
+  ];
 
   return (
     <div className="admin-portal">
       {/* Sidebar */}
       <div className="sider">
         <div className="sider-header">
-          <h3 style={{ fontStyle: "italic" }}>Hi, {username}</h3> {/* Direct text display */}
+          <h3 className="welcome-message">
+            <span className="welcome-text">Welcome,</span>
+            <span className="username">{username}</span>
+          </h3>
         </div>
         <nav className="sider-links">
-          {["Dashboard", "Products", "Categories", "Get a Quote", "Portfolio", "Product Sorting", "Search Tracker", "Testimonial", "FAQs", "About", "Terms and Conditions", "Privacy Policy"].map((item) => (
-            <a
-              key={item}
-              className={activeContent === item ? "active" : ""}
-              onClick={() => setActiveContent(item)}
-            >
-              {item}
-            </a>
-          ))}
-          
-          {/* Blog Management Tab */}
-          <div className="blog-management">
-            <a
-              className={activeContent === "Blog Management" ? "active" : ""}
+          {menuItems.map((item) => (
+            <button
+              key={item.name}
+              className={`sider-link ${
+                activeContent === item.name ? "active" : ""
+              }`}
               onClick={() => {
-                setActiveContent("Blog Management");
-                toggleBlogManagement();  // Toggle sub-tabs when clicked
+                setActiveContent(item.name);
+                if (item.name === "Blog Management") {
+                  toggleBlogManagement();
+                } else {
+                  setIsBlogManagementOpen(false);
+                }
               }}
             >
-              Blog Management
-              {isBlogManagementOpen ? <UpOutlined /> : <DownOutlined />}  {/* Switch icon based on state */}
-            </a>
-            
-            {/* Show the sub-tabs under Blog Management */}
+              <span className="link-icon">{item.icon}</span>
+              <span className="link-text">{item.name}</span>
+            </button>
+          ))}
+
+          {/* Blog Management Dropdown */}
+          <div className="blog-management">
+            <button
+              className={`sider-link dropdown-toggle ${
+                activeContent === "Blog Management" ? "active" : ""
+              }`}
+              onClick={toggleBlogManagement}
+            >
+              <span className="link-icon">
+                <ReadOutlined />
+              </span>
+              <span className="link-text">Blog Management</span>
+              <span className="dropdown-icon">
+                {isBlogManagementOpen ? <UpOutlined /> : <DownOutlined />}
+              </span>
+            </button>
+
             {isBlogManagementOpen && (
-              <div className="blog-tabs">
-                <a
-                  className={activeTab === "Blogs" ? "active-tab" : ""}
+              <div className="blog-submenu">
+                <button
+                  className={`submenu-link ${
+                    activeTab === "Blogs" ? "active-submenu" : ""
+                  }`}
                   onClick={() => setActiveTab("Blogs")}
                 >
-                  Blogs
-                </a>
-                <a
-                  className={activeTab === "Blog Categories" ? "active-tab" : ""}
+                  <ReadOutlined /> Blogs
+                </button>
+                <button
+                  className={`submenu-link ${
+                    activeTab === "Blog Categories" ? "active-submenu" : ""
+                  }`}
                   onClick={() => setActiveTab("Blog Categories")}
                 >
-                  Blog Categories
-                </a>
+                  <FolderOutlined /> Blog Categories
+                </button>
               </div>
             )}
           </div>
 
           <button className="logout-btn" onClick={handleLogout}>
-            <LogoutOutlined /> Logout
+            <LogoutOutlined /> <span>Logout</span>
           </button>
         </nav>
       </div>
 
       {/* Main Content */}
       <div className="main-content">
-        <h1 className="content-heading">{activeContent}</h1>
-        {renderContent()}
+        <h1 className="content-heading">
+          {menuItems.find((item) => item.name === activeContent)?.icon}
+          {activeContent}
+        </h1>
+        <div className="content-container">{renderContent()}</div>
       </div>
     </div>
   );
