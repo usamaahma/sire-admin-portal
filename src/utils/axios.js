@@ -14,6 +14,9 @@ const login = axios.create({
 const signup = axios.create({
   baseURL: `${baseURL}/auth`,
 });
+const getquote = axios.create({
+  baseURL: `${baseURL}/getquote`,
+});
 
 // Generic request interceptor for all instances
 const requestInterceptor = (req) => {
@@ -34,5 +37,6 @@ product.interceptors.request.use(requestInterceptor, errorInterceptor);
 export { product };
 signup.interceptors.request.use(requestInterceptor, errorInterceptor);
 login.interceptors.request.use(requestInterceptor, errorInterceptor);
+getquote.interceptors.request.use(requestInterceptor, errorInterceptor);
 
-export { signup, login };
+export { signup, login, getquote };

@@ -1,74 +1,92 @@
-import React, { useState } from "react";
-import { Table, Button, Space, Modal, message, Row, Col, Typography, Input } from "antd";
+import React, { useState, useEffect } from "react";
+import { getquote } from "../utils/axios";
+import {
+  Table,
+  Button,
+  Space,
+  Modal,
+  message,
+  Row,
+  Col,
+  Typography,
+  Input,
+  Image,
+} from "antd";
 import { EyeOutlined, DeleteOutlined } from "@ant-design/icons";
-import { Image } from "antd";
-import moment from "moment"; // Import moment.js for date formatting
+import moment from "moment";
 
 const { Text } = Typography;
 
 const Quote = () => {
-  // State for managing the data of quotes
-  const [quotes, setQuotes] = useState([
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@example.com",
-      phone: "+1234567890",
-      productname: "Product A",
-      message: "Looking for a quote for Product A",
-      createdAt: "2025-03-01 10:30:00", // Example date with time
-      length: "10 cm",
-      width: "5 cm",
-      depth: "3 cm",
-      color: "Red",
-      quantity: 50,
-      imageUrl: "https://via.placeholder.com/150", // Image URL for preview
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@example.com",
-      phone: "+1987654321",
-      productname: "Product B",
-      message: "Interested in purchasing Product B",
-      createdAt: "2025-03-02 12:45:00", // Example date with time
-      length: "12 cm",
-      width: "6 cm",
-      depth: "4 cm",
-      color: "Blue",
-      quantity: 100,
-      imageUrl: "https://via.placeholder.com/150", // Image URL for preview
-    },
-  ]);
-
-  // State for the modal visibility and selected quote
+  const [quotes, setQuotes] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
 
-  // Function to handle view button click
+  useEffect(() => {
+    getquote
+      .get("/")
+      .then((response) => {
+        setQuotes(response.data);
+        console.log(response, "quote ka data");
+      })
+      .catch((error) => {
+        console.error("Error fetching quotes:", error);
+        message.error("Failed to fetch quotes");
+      });
+  }, []);
+
   const handleView = (id) => {
     const quote = quotes.find((quote) => quote.id === id);
     setSelectedQuote(quote);
     setIsModalVisible(true);
   };
 
-  // Function to handle delete button click with confirmation
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     Modal.confirm({
       title: "Are you sure you want to delete this quote?",
-      onOk: () => {
-        setQuotes(quotes.filter((quote) => quote.id !== id));
-        message.success("Quote deleted successfully");
+      content: "This action cannot be undone",
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          // Show loading state
+          message.loading("Deleting quote...", 0);
+
+          // Call delete API
+          await getquote.delete(`/${id}`);
+
+          // Show success message
+          message.success("Quote deleted successfully");
+
+          // Refresh the quotes data
+          const response = await getquote.get("/");
+          setQuotes(response.data);
+        } catch (error) {
+          console.error("Delete error:", error);
+
+          // Show appropriate error message
+          if (error.response) {
+            if (error.response.status === 404) {
+              message.error("Quote not found");
+            } else {
+              message.error("Failed to delete quote");
+            }
+          } else {
+            message.error("Network error. Please try again.");
+          }
+        } finally {
+          // Hide loading message
+          message.destroy();
+        }
       },
     });
   };
-
-  // Table columns definition
   const columns = [
     {
-      title: "Name",
-      dataIndex: "name",
-      key: "name",
+      title: "Full Name",
+      dataIndex: "fullName",
+      key: "fullName",
     },
     {
       title: "Email",
@@ -76,14 +94,54 @@ const Quote = () => {
       key: "email",
     },
     {
-      title: "Phone",
-      dataIndex: "phone",
-      key: "phone",
+      title: "Phone Number",
+      dataIndex: "phoneNumber",
+      key: "phoneNumber",
     },
     {
-      title: "Product Name",
-      dataIndex: "productname",
-      key: "productname",
+      title: "Company Name",
+      dataIndex: "companyName",
+      key: "companyName",
+    },
+    {
+      title: "Product",
+      dataIndex: "chooseProduct",
+      key: "chooseProduct",
+    },
+    {
+      title: "Material",
+      dataIndex: "material",
+      key: "material",
+    },
+    {
+      title: "Colors",
+      dataIndex: "colors",
+      key: "colors",
+    },
+    {
+      title: "Finish Option",
+      dataIndex: "finishOption",
+      key: "finishOption",
+    },
+    {
+      title: "Length",
+      dataIndex: "length",
+      key: "length",
+    },
+    {
+      title: "Width",
+      dataIndex: "width",
+      key: "width",
+    },
+    {
+      title: "Height",
+      dataIndex: "height",
+      key: "height",
+    },
+    {
+      title: "Quantity",
+      dataIndex: "quantity",
+      key: "quantity",
     },
     {
       title: "Message",
@@ -91,10 +149,12 @@ const Quote = () => {
       key: "message",
     },
     {
-      title: "Created At",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      render: (text) => moment(text).format("YYYY-MM-DD HH:mm:ss"), // Format date with time
+      title: "Uploaded File",
+      dataIndex: "uploadFile",
+      key: "uploadFile",
+      render: (text) => (
+        <Image width={50} src={`path_to_your_images/${text}`} />
+      ),
     },
     {
       title: "Action",
@@ -111,166 +171,153 @@ const Quote = () => {
           <Button
             danger
             icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id)}
+            onClick={() => handleDelete(record._id)}
           >
             Delete
           </Button>
         </Space>
       ),
     },
+    {
+      title: "Created At",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      render: (text) => moment(text).format("YYYY-MM-DD HH:mm:ss"),
+    },
   ];
 
   return (
     <div>
       <p>Here you can view and manage the quotes you have received.</p>
-
-      {/* Table to display quotes */}
       <Table
         columns={columns}
         dataSource={quotes}
         rowKey="id"
-        pagination={{ pageSize: 5 }} // Optional: Limit the number of rows per page
-        scroll={{ x: "max-content" }} // Horizontal scroll for larger content
-        bordered // Add borders around the table
-        responsive // Automatically adjust table layout based on screen size
-        style={{ width: "90%", margin: "0 auto" }} // Adjust the table width and center it
+        pagination={{ pageSize: 5 }}
+        scroll={{ x: "max-content" }}
+        bordered
+        style={{ width: "90%", margin: "0 auto" }}
       />
-
-      {/* Modal to display quote details */}
       <Modal
-        title={<Text strong style={{ fontSize: "18px", textAlign: "center" }}>Quote Details</Text>} // Centered and bold heading
+        title={
+          <Text strong style={{ fontSize: "18px", textAlign: "center" }}>
+            Quote Details
+          </Text>
+        }
         visible={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
-        footer={null} // No footer for this modal
-        width={900} // Adjust modal width as required
+        footer={null}
+        width={900}
       >
         {selectedQuote && (
-          <div style={{ fontSize: "14px", textAlign: "center" }}> {/* Centered content and smaller font size */}
-            <Row gutter={16} style={{ marginBottom: 10, justifyContent: "center" }}>
+          <div style={{ fontSize: "14px", textAlign: "center" }}>
+            <Row
+              gutter={16}
+              style={{ marginBottom: 10, justifyContent: "center" }}
+            >
               <Col span={12}>
-                <Text strong style={{ fontSize: "14px", color: "#333" }}>Name:</Text>
-                <Input
-                  value={selectedQuote.name}
-                  disabled
-                  style={{
-                    fontSize: "14px", marginTop: 5, color: "#333", textAlign: "center"
-                  }}
-                />
+                <Text strong>Full Name:</Text>
+                <Input value={selectedQuote.fullName} disabled />
               </Col>
               <Col span={12}>
-                <Text strong style={{ fontSize: "14px", color: "#333" }}>Phone:</Text>
-                <Input
-                  value={selectedQuote.phone}
-                  disabled
-                  style={{
-                    fontSize: "14px", marginTop: 5, color: "#333", textAlign: "center"
-                  }}
-                />
+                <Text strong>Email:</Text>
+                <Input value={selectedQuote.email} disabled />
               </Col>
             </Row>
-            <Row gutter={16} style={{ marginBottom: 10, justifyContent: "center" }}>
+            <Row
+              gutter={16}
+              style={{ marginBottom: 10, justifyContent: "center" }}
+            >
               <Col span={12}>
-                <Text strong style={{ fontSize: "14px", color: "#333" }}>Email:</Text>
-                <Input
-                  value={selectedQuote.email}
-                  disabled
-                  style={{
-                    fontSize: "14px", marginTop: 5, color: "#333", textAlign: "center"
-                  }}
-                />
+                <Text strong>Phone Number:</Text>
+                <Input value={selectedQuote.phoneNumber} disabled />
               </Col>
               <Col span={12}>
-                <Text strong style={{ fontSize: "14px", color: "#333" }}>Product Name:</Text>
-                <Input
-                  value={selectedQuote.productname}
-                  disabled
-                  style={{
-                    fontSize: "14px", marginTop: 5, color: "#333", textAlign: "center"
-                  }}
-                />
+                <Text strong>Company Name:</Text>
+                <Input value={selectedQuote.companyName} disabled />
               </Col>
             </Row>
-            <Row gutter={16} style={{ marginBottom: 10, justifyContent: "center" }}>
+            <Row
+              gutter={16}
+              style={{ marginBottom: 10, justifyContent: "center" }}
+            >
               <Col span={12}>
-                <Text strong style={{ fontSize: "14px", color: "#333" }}>Message:</Text>
-                <Input
-                  value={selectedQuote.message}
-                  disabled
-                  style={{
-                    fontSize: "14px", marginTop: 5, color: "#333", textAlign: "center"
-                  }}
-                />
+                <Text strong>Product:</Text>
+                <Input value={selectedQuote.chooseProduct} disabled />
               </Col>
               <Col span={12}>
-                <Text strong style={{ fontSize: "14px", color: "#333" }}>Image:</Text>
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", marginTop: 5 }}>
-                  <Image width={100} src={selectedQuote.imageUrl} />
+                <Text strong>Material:</Text>
+                <Input value={selectedQuote.material} disabled />
+              </Col>
+            </Row>
+            <Row
+              gutter={16}
+              style={{ marginBottom: 10, justifyContent: "center" }}
+            >
+              <Col span={12}>
+                <Text strong>Colors:</Text>
+                <Input value={selectedQuote.colors} disabled />
+              </Col>
+              <Col span={12}>
+                <Text strong>Finish Option:</Text>
+                <Input value={selectedQuote.finishOption} disabled />
+              </Col>
+            </Row>
+            <Row
+              gutter={16}
+              style={{ marginBottom: 10, justifyContent: "center" }}
+            >
+              <Col span={8}>
+                <Text strong>Length:</Text>
+                <Input value={selectedQuote.length} disabled />
+              </Col>
+              <Col span={8}>
+                <Text strong>Width:</Text>
+                <Input value={selectedQuote.width} disabled />
+              </Col>
+              <Col span={8}>
+                <Text strong>Height:</Text>
+                <Input value={selectedQuote.height} disabled />
+              </Col>
+            </Row>
+            <Row
+              gutter={16}
+              style={{ marginBottom: 10, justifyContent: "center" }}
+            >
+              <Col span={12}>
+                <Text strong>Quantity:</Text>
+                <Input value={selectedQuote.quantity} disabled />
+              </Col>
+              <Col span={12}>
+                <Text strong>Message:</Text>
+                <Input value={selectedQuote.message} disabled />
+              </Col>
+            </Row>
+            <Row
+              gutter={16}
+              style={{ marginBottom: 10, justifyContent: "center" }}
+            >
+              <Col span={24}>
+                <Text strong>Uploaded File:</Text>
+                <div style={{ marginTop: 5 }}>
+                  <Image
+                    width={100}
+                    src={`path_to_your_images/${selectedQuote.uploadFile}`}
+                  />
                 </div>
               </Col>
             </Row>
-            <Row gutter={16} style={{ marginBottom: 10, justifyContent: "center" }}>
-              <Col span={12}>
-                <Text strong style={{ fontSize: "14px", color: "#333" }}>Length:</Text>
+            <Row
+              gutter={16}
+              style={{ marginBottom: 10, justifyContent: "center" }}
+            >
+              <Col span={24}>
+                <Text strong>Created At:</Text>
                 <Input
-                  value={selectedQuote.length}
+                  value={moment(selectedQuote.createdAt).format(
+                    "YYYY-MM-DD HH:mm:ss"
+                  )}
                   disabled
-                  style={{
-                    fontSize: "14px", marginTop: 5, color: "#333", textAlign: "center"
-                  }}
-                />
-              </Col>
-              <Col span={12}>
-                <Text strong style={{ fontSize: "14px", color: "#333" }}>Width:</Text>
-                <Input
-                  value={selectedQuote.width}
-                  disabled
-                  style={{
-                    fontSize: "14px", marginTop: 5, color: "#333", textAlign: "center"
-                  }}
-                />
-              </Col>
-            </Row>
-            <Row gutter={16} style={{ marginBottom: 10, justifyContent: "center" }}>
-              <Col span={12}>
-                <Text strong style={{ fontSize: "14px", color: "#333" }}>Depth:</Text>
-                <Input
-                  value={selectedQuote.depth}
-                  disabled
-                  style={{
-                    fontSize: "14px", marginTop: 5, color: "#333", textAlign: "center"
-                  }}
-                />
-              </Col>
-              <Col span={12}>
-                <Text strong style={{ fontSize: "14px", color: "#333" }}>Color:</Text>
-                <Input
-                  value={selectedQuote.color}
-                  disabled
-                  style={{
-                    fontSize: "14px", marginTop: 5, color: "#333", textAlign: "center"
-                  }}
-                />
-              </Col>
-            </Row>
-            <Row gutter={16} style={{ marginBottom: 10, justifyContent: "center" }}>
-              <Col span={12}>
-                <Text strong style={{ fontSize: "14px", color: "#333" }}>Quantity:</Text>
-                <Input
-                  value={selectedQuote.quantity}
-                  disabled
-                  style={{
-                    fontSize: "14px", marginTop: 5, color: "#333", textAlign: "center"
-                  }}
-                />
-              </Col>
-              <Col span={12}>
-                <Text strong style={{ fontSize: "14px", color: "#333" }}>Created At:</Text>
-                <Input
-                  value={moment(selectedQuote.createdAt).format("YYYY-MM-DD HH:mm:ss")}
-                  disabled
-                  style={{
-                    fontSize: "14px", marginTop: 5, color: "#333", textAlign: "center"
-                  }}
                 />
               </Col>
             </Row>
