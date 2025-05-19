@@ -1,6 +1,159 @@
-/* In your CSS file */
+/* categories.css */
+.categories-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.categories-header h2 {
+  margin-bottom: 8px;
+  font-size: 24px;
+  color: #333;
+}
+
+.categories-header p {
+  color: #666;
+  margin-bottom: 24px;
+}
+
+.categories-actions {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.category-view .category-image-container,
+.category-view .page-image-container {
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.category-view .image-caption {
+  margin-top: 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+.category-view .description-title {
+  font-size: 18px;
+  color: #444;
+  margin: 12px 0;
+}
+
+.category-view .description {
+  color: #555;
+  line-height: 1.6;
+}
+
+.sortable-list {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.sortable-item {
+  cursor: move;
+  transition: all 0.3s;
+}
+
+.sortable-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.ant-upload.ant-upload-select-picture-card {
+  width: 100%;
+  height: 150px;
+  margin-right: 0;
+  margin-bottom: 0;
+}
+
+.ant-upload-list-picture-card-container {
+  width: 100%;
+  height: 150px;
+}
+
+/* Form Item Label Styles */
 .ant-form-item-label > label {
-    text-align: left !important;
-    font-weight: bold !important;
+  text-align: left !important;
+  font-weight: bold !important;
+  color: #333 !important;
+  font-size: 14px !important;
+}
+
+.ant-form-item {
+  margin-bottom: 16px !important;
+}
+
+.ant-form-item-explain {
+  font-size: 12px !important;
+}
+
+/* Input Field Styles */
+.ant-input,
+.ant-input-textarea,
+.ant-select-selector {
+  border-radius: 4px !important;
+  padding: 8px 12px !important;
+}
+
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-textarea:focus,
+.ant-input-textarea-focused,
+.ant-select-focused .ant-select-selector {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+/* Button Styles */
+.ant-btn {
+  border-radius: 4px !important;
+  font-weight: 500 !important;
+}
+
+.ant-btn-primary {
+  background-color: #1890ff !important;
+  border-color: #1890ff !important;
+}
+
+/* Modal Styles */
+.ant-modal-header {
+  border-radius: 8px 8px 0 0 !important;
+  background: #fafafa !important;
+}
+
+.ant-modal-title {
+  font-weight: 600 !important;
+  font-size: 18px !important;
+}
+
+/* Table Styles */
+.ant-table {
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+.ant-table-thead > tr > th {
+  background-color: #fafafa !important;
+  font-weight: 600 !important;
+}
+
+/* Tag Styles */
+.ant-tag {
+  border-radius: 4px !important;
+  margin-bottom: 4px !important;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .categories-container {
+    padding: 16px;
   }
   
+  .ant-col {
+    width: 100% !important;
+  }
+  
+  .ant-form-item-label {
+    text-align: left !important;
+  }
+}

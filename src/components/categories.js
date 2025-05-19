@@ -11,6 +11,10 @@ import {
   Image,
   Row,
   Col,
+  Card,
+  Tag,
+  Divider,
+  Select
 } from "antd";
 import {
   EyeOutlined,
@@ -18,6 +22,10 @@ import {
   DeleteOutlined,
   ArrowsAltOutlined,
   PlusOutlined,
+  CloseOutlined,
+  CheckOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined
 } from "@ant-design/icons";
 import "./categories.css";
 
@@ -27,36 +35,66 @@ const Categories = () => {
     {
       id: 1,
       shortTitle: "Electronics",
-      slug: "electronics",
+      descriptionTitle: "Electronics Collection",
       description: "All kinds of electronic products",
-      image: "https://via.placeholder.com/50",
+      categoryImage: "https://via.placeholder.com/150",
+      pageImage: "https://via.placeholder.com/300",
+      seoDescription: "Best electronics at great prices",
+      seoKeywords: "electronics, gadgets, devices",
     },
     {
       id: 2,
       shortTitle: "Furniture",
-      slug: "furniture",
+      descriptionTitle: "Furniture Collection",
       description: "Modern and vintage furniture",
-      image: "https://via.placeholder.com/50",
+      categoryImage: "https://via.placeholder.com/150",
+      pageImage: "https://via.placeholder.com/300",
+      seoDescription: "Quality furniture for your home",
+      seoKeywords: "furniture, home, decor",
     },
   ]);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [form] = Form.useForm(); // Ant Design Form hook
 
-  // Function to handle the "view" button
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isViewModalVisible, setIsViewModalVisible] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isSortModalVisible, setIsSortModalVisible] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [sortedCategories, setSortedCategories] = useState([]);
+  const [form] = Form.useForm();
+
+  // View Category
   const handleView = (id) => {
     const category = categories.find((category) => category.id === id);
-    console.log("View Category:", category);
-    // You can display a detailed view or modal here
+    setSelectedCategory(category);
+    setIsViewModalVisible(true);
   };
 
-  // Function to handle the "edit" button
+  // Edit Category
   const handleEdit = (id) => {
     const category = categories.find((category) => category.id === id);
-    console.log("Edit Category:", category);
-    // You can open an edit form/modal here
+    setSelectedCategory(category);
+    
+    form.setFieldsValue({
+      ...category,
+      categoryImage: category.categoryImage ? [{
+        uid: '-1',
+        name: 'current-image.png',
+        status: 'done',
+        url: category.categoryImage,
+      }] : [],
+      pageImage: category.pageImage ? [{
+        uid: '-2',
+        name: 'current-page-image.png',
+        status: 'done',
+        url: category.pageImage,
+      }] : [],
+      seoKeywords: category.seoKeywords.split(',').map(k => k.trim())
+    });
+    
+    setIsEditModalVisible(true);
   };
 
-  // Function to handle the "delete" button
+  // Delete Category
   const handleDelete = (id) => {
     Modal.confirm({
       title: "Are you sure you want to delete this category?",
@@ -67,30 +105,78 @@ const Categories = () => {
     });
   };
 
-  // Function to handle "sort products" button
+  // Sort Products
   const handleSortProducts = (id) => {
-    const category = categories.find((category) => category.id === id);
-    console.log("Sort Products in Category:", category);
-    // You can open a modal to sort products inside this category
+    setSortedCategories([...categories]);
+    setIsSortModalVisible(true);
   };
 
-  // Function to open the Add Category modal
+  // Move category up in sorting
+  const moveCategoryUp = (index) => {
+    if (index === 0) return;
+    const newSorted = [...sortedCategories];
+    [newSorted[index], newSorted[index - 1]] = [newSorted[index - 1], newSorted[index]];
+    setSortedCategories(newSorted);
+  };
+
+  // Move category down in sorting
+  const moveCategoryDown = (index) => {
+    if (index === sortedCategories.length - 1) return;
+    const newSorted = [...sortedCategories];
+    [newSorted[index], newSorted[index + 1]] = [newSorted[index + 1], newSorted[index]];
+    setSortedCategories(newSorted);
+  };
+
+  // Save sorted categories
+  const saveSortedCategories = () => {
+    setCategories(sortedCategories);
+    message.success("Categories order saved successfully!");
+    setIsSortModalVisible(false);
+  };
+
+  // Add new category
   const handleAddCategory = () => {
+    form.resetFields();
     setIsModalVisible(true);
   };
 
-  // Handle form submission
+  // Handle form submission for add
   const handleSubmit = (values) => {
     const newCategory = {
       id: categories.length + 1,
       ...values,
-      image: values.categoryImage ? values.categoryImage.fileList[0].url : "",
-      pageImage: values.pageImage ? values.pageImage.fileList[0].url : "",
+      categoryImage: values.categoryImage?.[0]?.thumbUrl || "https://via.placeholder.com/150",
+      pageImage: values.pageImage?.[0]?.thumbUrl || "https://via.placeholder.com/300",
+      seoKeywords: values.seoKeywords.join(', ')
     };
     setCategories([...categories, newCategory]);
     message.success("Category added successfully!");
     setIsModalVisible(false);
-    form.resetFields(); // Reset form fields
+  };
+
+  // Handle form submission for edit
+  const handleEditSubmit = (values) => {
+    const updatedCategory = {
+      ...selectedCategory,
+      ...values,
+      categoryImage: values.categoryImage?.[0]?.thumbUrl || 
+                    values.categoryImage?.[0]?.url || 
+                    selectedCategory.categoryImage,
+      pageImage: values.pageImage?.[0]?.thumbUrl || 
+                values.pageImage?.[0]?.url || 
+                selectedCategory.pageImage,
+      seoKeywords: Array.isArray(values.seoKeywords) ? 
+                 values.seoKeywords.join(', ') : 
+                 values.seoKeywords
+    };
+
+    const updatedCategories = categories.map(category => 
+      category.id === selectedCategory.id ? updatedCategory : category
+    );
+    
+    setCategories(updatedCategories);
+    message.success("Category updated successfully!");
+    setIsEditModalVisible(false);
   };
 
   // Table columns configuration
@@ -99,222 +185,450 @@ const Categories = () => {
       title: "ID",
       dataIndex: "id",
       key: "id",
+      width: 80,
     },
     {
       title: "Short Title",
       dataIndex: "shortTitle",
       key: "shortTitle",
-    },
-    {
-      title: "Slug",
-      dataIndex: "slug",
-      key: "slug",
+      render: (text) => <strong>{text}</strong>,
     },
     {
       title: "Description",
       dataIndex: "description",
       key: "description",
+      ellipsis: true,
     },
     {
       title: "Image",
-      dataIndex: "image",
+      dataIndex: "categoryImage",
       key: "image",
-      render: (text) => <Image src={text} width={50} height={50} />,
+      render: (text) => <Image src={text} width={50} height={50} style={{ borderRadius: 4 }} />,
+      width: 100,
     },
     {
-      title: "Action",
+      title: "Actions",
       key: "action",
       render: (text, record) => (
         <Space size="middle">
           <Button
-            type="primary"
+            type="text"
             icon={<EyeOutlined />}
             onClick={() => handleView(record.id)}
-          >
-            View
-          </Button>
+            title="View"
+          />
           <Button
-            type="default"
+            type="text"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record.id)}
-          >
-            Edit
-          </Button>
+            title="Edit"
+          />
           <Button
+            type="text"
             danger
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record.id)}
-          >
-            Delete
-          </Button>
+            title="Delete"
+          />
           <Button
-            type="dashed"
+            type="text"
             icon={<ArrowsAltOutlined />}
             onClick={() => handleSortProducts(record.id)}
-          >
-            Sort Products
-          </Button>
+            title="Sort Categories"
+          />
         </Space>
       ),
+      width: 180,
     },
   ];
 
   return (
-    <div>
-      <p>Manage your product categories here.</p>
+    <div className="categories-container">
+      <div className="categories-header">
+        <h2>Manage Categories</h2>
+        <p>Create, edit, and organize your product categories</p>
+      </div>
 
-      {/* Button to open the Add Category Modal */}
-      <Button
-        type="primary"
-        icon={<PlusOutlined />}
-        onClick={handleAddCategory}
-        style={{ marginBottom: "20px" }}
-      >
-        Add Category
-      </Button>
+      <div className="categories-actions">
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleAddCategory}
+        >
+          Add Category
+        </Button>
+      </div>
 
-      {/* Table for Categories */}
       <Table
         columns={columns}
         dataSource={categories}
         rowKey="id"
-        pagination={{ pageSize: 5 }} // Optional: Limit the number of rows per page
-        scroll={{ x: "max-content" }} // Horizontal scroll for larger content
-        bordered // Add borders around the table
-        responsive // Automatically adjust table layout based on screen size
-        style={{ width: "90%", margin: "0 auto" }} // Adjust the table width and center it
+        pagination={{ pageSize: 5 }}
+        scroll={{ x: "max-content" }}
+        bordered
+        style={{ background: "#fff", borderRadius: 8 }}
       />
 
-      {/* Modal for Adding Category */}
+      {/* Add Category Modal */}
       <Modal
-        title="Add Category"
+        title="Add New Category"
         visible={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
         footer={null}
+        width={800}
       >
         <Form
           form={form}
           onFinish={handleSubmit}
           layout="vertical"
-          initialValues={{ rating: 5 }}
         >
-          <Form.Item
-            label="Category Title"
-            name="shortTitle"
-            rules={[
-              { required: true, message: "Please enter the category title!" },
-            ]}
-            style={{ textAlign: "left" }} // Align label to the left
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            label="Page Title"
-            name="slug"
-            rules={[
-              { required: true, message: "Please enter the page title!" },
-            ]}
-            style={{ textAlign: "left" }} // Align label to the left
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            label="Description Title"
-            name="descriptionTitle"
-            rules={[
-              {
-                required: true,
-                message: "Please enter the description title!",
-              },
-            ]}
-            style={{ textAlign: "left" }} // Align label to the left
-          >
-            <Input />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Category Title"
+                name="shortTitle"
+                rules={[{ required: true, message: "Please enter category title" }]}
+              >
+                <Input placeholder="e.g. Electronics" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Description Title"
+                name="descriptionTitle"
+                rules={[{ required: true, message: "Please enter description title" }]}
+              >
+                <Input placeholder="e.g. Electronics Collection" />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Form.Item
             label="Description"
             name="description"
-            rules={[
-              { required: true, message: "Please enter the description!" },
-            ]}
-            style={{ textAlign: "left" }} // Align label to the left
+            rules={[{ required: true, message: "Please enter description" }]}
           >
-            <Input.TextArea rows={4} />
+            <Input.TextArea rows={4} placeholder="Detailed description of the category" />
           </Form.Item>
 
-          <Form.Item
-            label="Category Image"
-            name="categoryImage"
-            rules={[
-              { required: true, message: "Please upload the category image!" },
-            ]}
-            style={{ textAlign: "left" }} // Align label to the left
-          >
-            <Upload
-              action="/upload" // Set your upload endpoint here
-              listType="picture"
-              showUploadList={false}
-              customRequest={({ file, onSuccess }) => {
-                setTimeout(() => {
-                  onSuccess("ok");
-                }, 0);
-              }}
-            >
-              <Button>Upload Image</Button>
-            </Upload>
-          </Form.Item>
-
-          <Form.Item
-            label="Page Image"
-            name="pageImage"
-            rules={[
-              { required: true, message: "Please upload the page image!" },
-            ]}
-            style={{ textAlign: "left" }} // Align label to the left
-          >
-            <Upload
-              action="/upload" // Set your upload endpoint here
-              listType="picture"
-              showUploadList={false}
-              customRequest={({ file, onSuccess }) => {
-                setTimeout(() => {
-                  onSuccess("ok");
-                }, 0);
-              }}
-            >
-              <Button>Upload Page Image</Button>
-            </Upload>
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Category Image"
+                name="categoryImage"
+                valuePropName="fileList"
+                getValueFromEvent={(e) => {
+                  if (Array.isArray(e)) return e;
+                  return e?.fileList || [];
+                }}
+              >
+                <Upload
+                  listType="picture-card"
+                  maxCount={1}
+                  beforeUpload={() => false}
+                >
+                  <div>
+                    <PlusOutlined />
+                    <div style={{ marginTop: 8 }}>Upload</div>
+                  </div>
+                </Upload>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Page Image"
+                name="pageImage"
+                valuePropName="fileList"
+                getValueFromEvent={(e) => {
+                  if (Array.isArray(e)) return e;
+                  return e?.fileList || [];
+                }}
+              >
+                <Upload
+                  listType="picture-card"
+                  maxCount={1}
+                  beforeUpload={() => false}
+                >
+                  <div>
+                    <PlusOutlined />
+                    <div style={{ marginTop: 8 }}>Upload</div>
+                  </div>
+                </Upload>
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Form.Item
             label="SEO Description"
             name="seoDescription"
-            rules={[
-              { required: true, message: "Please enter the SEO description!" },
-            ]}
-            style={{ textAlign: "left" }} // Align label to the left
+            rules={[{ required: true, message: "Please enter SEO description" }]}
           >
-            <Input.TextArea rows={4} />
+            <Input.TextArea rows={3} placeholder="SEO meta description" />
           </Form.Item>
 
           <Form.Item
             label="SEO Keywords"
             name="seoKeywords"
-            rules={[{ required: true, message: "Please enter SEO keywords!" }]}
-            style={{ textAlign: "left" }} // Align label to the left
+            rules={[{ required: true, message: "Please enter SEO keywords" }]}
           >
-            <Input />
+            <Select
+              mode="tags"
+              style={{ width: '100%' }}
+              placeholder="Add keywords separated by commas"
+              tokenSeparators={[',']}
+            />
           </Form.Item>
 
           <Form.Item>
-            <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
+            <Button type="primary" htmlType="submit" block size="large">
               Create Category
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* View Category Modal */}
+      <Modal
+        title="Category Details"
+        visible={isViewModalVisible}
+        onCancel={() => setIsViewModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setIsViewModalVisible(false)}>
+            Close
+          </Button>
+        ]}
+        width={700}
+      >
+        {selectedCategory && (
+          <div className="category-view">
+            <Row gutter={16}>
+              <Col span={8}>
+                <div className="category-image-container">
+                  <Image
+                    src={selectedCategory.categoryImage}
+                    alt={selectedCategory.shortTitle}
+                    width="100%"
+                    style={{ borderRadius: 8 }}
+                  />
+                  <p className="image-caption">Category Image</p>
+                </div>
+              </Col>
+              <Col span={16}>
+                <div className="category-details">
+                  <h2>{selectedCategory.shortTitle}</h2>
+                  <p className="description-title">{selectedCategory.descriptionTitle}</p>
+                  <p className="description">{selectedCategory.description}</p>
+                  
+                  <Divider orientation="left">SEO Information</Divider>
+                  <p><strong>SEO Description:</strong> {selectedCategory.seoDescription}</p>
+                  <p>
+                    <strong>SEO Keywords:</strong> 
+                    {selectedCategory.seoKeywords.split(',').map(keyword => (
+                      <Tag key={keyword.trim()} style={{ marginLeft: 8 }}>{keyword.trim()}</Tag>
+                    ))}
+                  </p>
+                </div>
+              </Col>
+            </Row>
+            <Row style={{ marginTop: 24 }}>
+              <Col span={24}>
+                <div className="page-image-container">
+                  <Image
+                    src={selectedCategory.pageImage}
+                    alt={selectedCategory.shortTitle}
+                    width="100%"
+                    style={{ borderRadius: 8 }}
+                  />
+                  <p className="image-caption">Page Image</p>
+                </div>
+              </Col>
+            </Row>
+          </div>
+        )}
+      </Modal>
+
+      {/* Edit Category Modal */}
+      <Modal
+        title={`Edit Category: ${selectedCategory?.shortTitle}`}
+        visible={isEditModalVisible}
+        onCancel={() => setIsEditModalVisible(false)}
+        footer={null}
+        width={800}
+      >
+        {selectedCategory && (
+          <Form
+            form={form}
+            onFinish={handleEditSubmit}
+            layout="vertical"
+          >
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Category Title"
+                  name="shortTitle"
+                  rules={[{ required: true, message: "Please enter category title" }]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Description Title"
+                  name="descriptionTitle"
+                  rules={[{ required: true, message: "Please enter description title" }]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item
+              label="Description"
+              name="description"
+              rules={[{ required: true, message: "Please enter description" }]}
+            >
+              <Input.TextArea rows={4} />
+            </Form.Item>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Category Image"
+                  name="categoryImage"
+                  valuePropName="fileList"
+                  getValueFromEvent={(e) => {
+                    if (Array.isArray(e)) return e;
+                    return e?.fileList || [];
+                  }}
+                >
+                  <Upload
+                    listType="picture-card"
+                    maxCount={1}
+                    beforeUpload={() => false}
+                  >
+                    {(form.getFieldValue('categoryImage') || []).length >= 1 ? null : (
+                      <div>
+                        <PlusOutlined />
+                        <div style={{ marginTop: 8 }}>Upload</div>
+                      </div>
+                    )}
+                  </Upload>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Page Image"
+                  name="pageImage"
+                  valuePropName="fileList"
+                  getValueFromEvent={(e) => {
+                    if (Array.isArray(e)) return e;
+                    return e?.fileList || [];
+                  }}
+                >
+                  <Upload
+                    listType="picture-card"
+                    maxCount={1}
+                    beforeUpload={() => false}
+                  >
+                    {(form.getFieldValue('pageImage') || []).length >= 1 ? null : (
+                      <div>
+                        <PlusOutlined />
+                        <div style={{ marginTop: 8 }}>Upload</div>
+                      </div>
+                    )}
+                  </Upload>
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item
+              label="SEO Description"
+              name="seoDescription"
+              rules={[{ required: true, message: "Please enter SEO description" }]}
+            >
+              <Input.TextArea rows={3} />
+            </Form.Item>
+
+            <Form.Item
+              label="SEO Keywords"
+              name="seoKeywords"
+              rules={[{ required: true, message: "Please enter SEO keywords" }]}
+            >
+              <Select
+                mode="tags"
+                style={{ width: '100%' }}
+                placeholder="Add keywords separated by commas"
+                tokenSeparators={[',']}
+              />
+            </Form.Item>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" block size="large">
+                Update Category
+              </Button>
+            </Form.Item>
+          </Form>
+        )}
+      </Modal>
+
+      {/* Sort Categories Modal */}
+      <Modal
+        title="Sort Categories"
+        visible={isSortModalVisible}
+        onCancel={() => setIsSortModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setIsSortModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button 
+            key="save" 
+            type="primary" 
+            onClick={saveSortedCategories}
+            icon={<CheckOutlined />}
+          >
+            Save Order
+          </Button>
+        ]}
+        width={600}
+      >
+        <div className="sortable-list">
+          {sortedCategories.map((category, index) => (
+            <Card 
+              key={category.id} 
+              className="sortable-item"
+              style={{ marginBottom: 16 }}
+            >
+              <Row align="middle" gutter={16}>
+                <Col flex="auto">
+                  <Space>
+                    <Image 
+                      src={category.categoryImage} 
+                      width={40} 
+                      height={40} 
+                      preview={false}
+                      style={{ borderRadius: 4 }}
+                    />
+                    <span>{category.shortTitle}</span>
+                  </Space>
+                </Col>
+                <Col>
+                  <Space>
+                    <Button 
+                      icon={<ArrowUpOutlined />} 
+                      onClick={() => moveCategoryUp(index)}
+                      disabled={index === 0}
+                    />
+                    <Button 
+                      icon={<ArrowDownOutlined />} 
+                      onClick={() => moveCategoryDown(index)}
+                      disabled={index === sortedCategories.length - 1}
+                    />
+                  </Space>
+                </Col>
+              </Row>
+            </Card>
+          ))}
+        </div>
       </Modal>
     </div>
   );
