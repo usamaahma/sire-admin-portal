@@ -1,142 +1,289 @@
-import React, { useState } from "react";
-import { Table, Button, Input, Modal, Form } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import ReactQuill from "react-quill"; // Import ReactQuill editor
-import "react-quill/dist/quill.snow.css"; // Import the default theme for Quill
+import React, { useEffect, useState } from "react";
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  message
+} from "antd";
+import {
+  EditOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  PlusOutlined
+} from "@ant-design/icons";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
+import { privacy } from "../utils/axios"; // 👈 import your Axios instance
 
 const PrivacyPolicy = () => {
   const [data, setData] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isViewModalVisible, setIsViewModalVisible] = useState(false);
+  const [currentMode, setCurrentMode] = useState("add");
   const [currentRecord, setCurrentRecord] = useState(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [items, setItems] = useState([{ title: "", description: "" }]);
+  const [form] = Form.useForm();
 
-  // Handle Add Privacy Policy click
-  const handleAddClick = () => {
-    setIsModalVisible(true);
-    setIsEditing(false); // Reset to Add mode
-    setTitle("");
-    setDescription("");
+  const modules = {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ["bold", "italic", "underline", "strike"],
+      [{ color: [] }, { background: [] }],
+      [{ script: "sub" }, { script: "super" }],
+      [{ align: [] }],
+      ["blockquote", "code-block"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["link", "image", "video"],
+      ["clean"],
+    ],
   };
 
-  // Handle Edit Privacy Policy click
-  const handleEditClick = (record) => {
-    setIsModalVisible(true);
-    setIsEditing(true); // Set Edit mode
-    setCurrentRecord(record);
-    setTitle(record.title);
-    setDescription(record.description);
-  };
+  const formats = [
+    "header", "bold", "italic", "underline", "strike",
+    "color", "background", "script", "align",
+    "blockquote", "code-block", "list", "bullet",
+    "link", "image", "video"
+  ];
 
-  // Save Privacy Policy (Add or Edit)
-  const handleSave = () => {
-    if (isEditing && currentRecord) {
-      // Edit existing record
-      const updatedData = data.map((item) =>
-        item.key === currentRecord.key ? { ...item, title, description } : item
-      );
-      setData(updatedData);
-    } else {
-      // Add new record
-      const newRecord = {
-        key: Math.random(), // Random key to simulate unique ID
-        title,
-        description,
-      };
-      setData([newRecord]);
+  useEffect(() => {
+    fetchPrivacyData();
+  }, []);
+
+  const fetchPrivacyData = async () => {
+    try {
+      const response = await privacy.get("/");
+      const responseData = response.data;
+
+      if (responseData && responseData.length > 0) {
+        const formattedData = responseData.map((item) => ({
+          key: item._id,
+          items: item.title.map((t, i) => ({
+            title: t,
+            description: item.description[i] || "",
+          })),
+        }));
+        setData(formattedData);
+      } else {
+        setData([]);
+      }
+    } catch (error) {
+      message.error("Failed to fetch privacy policy data");
+      console.error("GET error:", error);
     }
-    setIsModalVisible(false); // Close modal
   };
 
-  // Handle Delete Privacy Policy
+  const handleAddClick = () => {
+    setCurrentMode("add");
+    setItems([{ title: "", description: "" }]);
+    form.resetFields();
+    setIsModalVisible(true);
+  };
+
+  const handleEditClick = (record) => {
+    setCurrentMode("edit");
+    setCurrentRecord(record);
+    setItems(record.items);
+    form.setFieldsValue({ items: record.items });
+    setIsModalVisible(true);
+  };
+
+  const handleViewClick = (record) => {
+    setItems(record.items);
+    setIsViewModalVisible(true);
+  };
+
   const handleDelete = (key) => {
-    const updatedData = data.filter((item) => item.key !== key);
-    setData(updatedData);
+    Modal.confirm({
+      title: "Confirm Delete",
+      content: "Are you sure you want to delete this policy?",
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          await privacy.delete(`/${key}`);
+          message.success("Deleted successfully");
+          fetchPrivacyData();
+        } catch (error) {
+          message.error("Delete failed");
+          console.error(error);
+        }
+      },
+    });
   };
 
-  // Columns for the Ant Design table
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields();
+      const titles = values.items.map((item) => item.title);
+      const descriptions = values.items.map((item) => item.description);
+
+      const payload = {
+        title: titles,
+        description: descriptions,
+      };
+
+      if (currentMode === "edit" && currentRecord) {
+        await privacy.patch(`/${currentRecord.key}`, payload);
+        message.success("Updated successfully");
+      } else {
+        await privacy.post("/", payload);
+        message.success("Added successfully");
+      }
+
+      fetchPrivacyData();
+      setIsModalVisible(false);
+    } catch (err) {
+      console.error("Validation failed:", err);
+      message.error("Something went wrong");
+    }
+  };
+
+  const addItem = async () => {
+    try {
+      const currentValues = await form.validateFields();
+      const newItems = [...currentValues.items, { title: "", description: "" }];
+      setItems(newItems);
+      form.setFieldsValue({ items: newItems });
+    } catch {
+      const newItems = [...items, { title: "", description: "" }];
+      setItems(newItems);
+      form.setFieldsValue({ items: newItems });
+    }
+  };
+
+  const removeItem = (index) => {
+    const newItems = items.filter((_, i) => i !== index);
+    setItems(newItems);
+    form.setFieldsValue({ items: newItems });
+  };
+
   const columns = [
     {
-      title: "Title",
-      dataIndex: "title",
-      key: "title",
-      render: (text) => <span>{text}</span>,
+      title: "Titles",
+      dataIndex: "items",
+      key: "titles",
+      render: (items) => (
+        <div>
+          {items?.slice(0, 2).map((item, i) => (
+            <div key={i}>{item.title}</div>
+          ))}
+          {items?.length > 2 && <span>+{items.length - 2} more</span>}
+        </div>
+      ),
     },
     {
-      title: "Description",
-      dataIndex: "description",
+      title: "Description Preview",
+      dataIndex: "items",
       key: "description",
-      render: (text) => <span>{text.slice(0, 50)}...</span>, // Show a snippet of the description
+      render: (items) => (
+        <div
+          dangerouslySetInnerHTML={{
+            __html: (items?.[0]?.description || "").slice(0, 100) + "...",
+          }}
+        />
+      ),
     },
     {
-      title: "Action",
-      key: "action",
+      title: "Actions",
+      key: "actions",
       render: (_, record) => (
-        <span>
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => handleEditClick(record)}
-            disabled={data.length === 0} // Disable edit if no data
-          />
-          <Button
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.key)}
-            disabled={data.length === 0} // Disable delete if no data
-            style={{ marginLeft: 8 }}
-          />
-        </span>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <Button icon={<EyeOutlined />} onClick={() => handleViewClick(record)} />
+          <Button icon={<EditOutlined />} onClick={() => handleEditClick(record)} />
+          <Button icon={<DeleteOutlined />} onClick={() => handleDelete(record.key)} danger />
+        </div>
       ),
     },
   ];
 
   return (
     <div>
-      {/* Add Privacy Policy Button */}
       {data.length === 0 && (
-        <Button type="primary" onClick={handleAddClick}>
+        <Button
+          type="primary"
+          onClick={handleAddClick}
+          icon={<PlusOutlined />}
+          style={{ marginBottom: 16 }}
+        >
           Add Privacy Policy
         </Button>
       )}
 
-      {/* Table for displaying privacy policy content */}
       <Table
         columns={columns}
         dataSource={data}
         pagination={false}
         rowKey="key"
-        style={{ marginTop: 20 }}
+        bordered
       />
 
-      {/* Modal for Adding/Editing Privacy Policy */}
+      {/* Modal for Add/Edit */}
       <Modal
-        title={isEditing ? "Edit Privacy Policy" : "Add Privacy Policy"}
-        visible={isModalVisible}
+        title={currentMode === "edit" ? "Edit Privacy Policy" : "Add Privacy Policy"}
+        open={isModalVisible}
         onOk={handleSave}
         onCancel={() => setIsModalVisible(false)}
-        okText={isEditing ? "Save Changes" : "Save"}
+        okText={currentMode === "edit" ? "Update" : "Save"}
         cancelText="Cancel"
-        width="80%" // Or use specific value like '600px'
-        style={{
-          maxWidth: "900px", // This will ensure it doesn't exceed 900px in width even if 80% is larger
-        }}
+        width="80%"
+        destroyOnClose
       >
-        <Form>
-          <Form.Item label="Title">
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter title"
-            />
-          </Form.Item>
-          <Form.Item label="Description">
-            <ReactQuill
-              value={description}
-              onChange={setDescription}
-              placeholder="Enter description"
-            />
-          </Form.Item>
+        <Form form={form} layout="vertical">
+          {items.map((item, index) => (
+            <div key={index} style={{ marginBottom: 32, borderBottom: '1px solid #ddd', paddingBottom: 16 }}>
+              <Form.Item
+                label={`Title ${index + 1}`}
+                name={['items', index, 'title']}
+                rules={[{ required: true, message: "Title is required" }]}
+              >
+                <Input placeholder="Enter title" />
+              </Form.Item>
+              <Form.Item
+                label={`Description ${index + 1}`}
+                name={['items', index, 'description']}
+                rules={[{ required: true, message: "Description is required" }]}
+              >
+                <ReactQuill
+                  theme="snow"
+                  modules={modules}
+                  formats={formats}
+                  style={{ height: 200 }}
+                />
+              </Form.Item>
+              {items.length > 1 && (
+                <Button danger onClick={() => removeItem(index)}>
+                  Remove
+                </Button>
+              )}
+            </div>
+          ))}
+          <Button type="dashed" onClick={addItem} icon={<PlusOutlined />}>
+            Add Another Section
+          </Button>
         </Form>
+      </Modal>
+
+      {/* View Modal */}
+      <Modal
+        title="View Privacy Policy"
+        open={isViewModalVisible}
+        onCancel={() => setIsViewModalVisible(false)}
+        footer={<Button onClick={() => setIsViewModalVisible(false)}>Close</Button>}
+        width="80%"
+      >
+        {items.map((item, index) => (
+          <div key={index} style={{ marginBottom: 32 }}>
+            <h3>{item.title}</h3>
+            <div
+              className="ql-editor"
+              dangerouslySetInnerHTML={{ __html: item.description }}
+              style={{ padding: 0 }}
+            />
+          </div>
+        ))}
       </Modal>
     </div>
   );

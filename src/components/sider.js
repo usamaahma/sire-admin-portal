@@ -10,7 +10,6 @@ import {
   FormOutlined,
   PictureOutlined,
   SortAscendingOutlined,
-  SearchOutlined,
   MessageOutlined,
   QuestionCircleOutlined,
   ReadOutlined,
@@ -18,14 +17,16 @@ import {
   InfoCircleOutlined,
   FileTextOutlined,
   LockOutlined,
+  MenuOutlined,
+  FolderAddOutlined,
 } from "@ant-design/icons";
+
 import Dashboard from "./dashboard";
 import Products from "./product";
 import Categories from "./categories";
 import Quote from "./getaquote";
 import Portfolio from "./portfolio";
 import ProductSorting from "./productsorting";
-import SearchTracker from "./searchtracker";
 import Testimonial from "./testimonial";
 import Faqs from "./faqs";
 import Blog from "./blogs/blogs";
@@ -33,7 +34,10 @@ import Blogcategory from "./blogs/blogcategory";
 import About from "./about";
 import TermsConditions from "./terms";
 import PrivacyPolicy from "./privacy";
+import Navbarcategory from "./navbarcategory";
+import Subcategory from "./sub-category";
 import "./sider.css";
+import Contact from "./contactus";
 
 const AdminPortal = () => {
   const [activeContent, setActiveContent] = useState("Dashboard");
@@ -56,15 +60,15 @@ const AdminPortal = () => {
       case "Products":
         return <Products />;
       case "Categories":
-        return <Categories />;
+        return <Categories setActiveContent={setActiveContent} />; // Pass if needed
+      case "Navbar Categories":
+        return <Navbarcategory />;
       case "Get a Quote":
         return <Quote />;
       case "Portfolio":
         return <Portfolio />;
       case "Product Sorting":
         return <ProductSorting />;
-      // case "Search Tracker":
-      //   return <SearchTracker />;
       case "Testimonial":
         return <Testimonial />;
       case "FAQs":
@@ -99,8 +103,12 @@ const AdminPortal = () => {
         return <About />;
       case "Terms and Conditions":
         return <TermsConditions />;
+      case "Contact Us":
+        return <Contact />;
       case "Privacy Policy":
         return <PrivacyPolicy />;
+      case "Subcategory": // ✅ Add this
+        return <Subcategory />;
       default:
         return <Dashboard />;
     }
@@ -122,16 +130,19 @@ const AdminPortal = () => {
   const menuItems = [
     { name: "Dashboard", icon: <DashboardOutlined /> },
     { name: "Products", icon: <ShoppingOutlined /> },
+    { name: "Navbar Categories", icon: <MenuOutlined /> },
     { name: "Categories", icon: <AppstoreOutlined /> },
     { name: "Get a Quote", icon: <FormOutlined /> },
     { name: "Portfolio", icon: <PictureOutlined /> },
     { name: "Product Sorting", icon: <SortAscendingOutlined /> },
-    // { name: "Search Tracker", icon: <SearchOutlined /> },
     { name: "Testimonial", icon: <MessageOutlined /> },
     { name: "FAQs", icon: <QuestionCircleOutlined /> },
     { name: "About", icon: <InfoCircleOutlined /> },
     { name: "Terms and Conditions", icon: <FileTextOutlined /> },
     { name: "Privacy Policy", icon: <LockOutlined /> },
+    { name: "Contact Us", icon: <FormOutlined /> },
+    // ✅ Optional: You can show Subcategory in sidebar too
+    // { name: "Subcategory", icon: <FolderAddOutlined /> },
   ];
 
   return (

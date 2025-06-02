@@ -17,6 +17,27 @@ const signup = axios.create({
 const getquote = axios.create({
   baseURL: `${baseURL}/getquote`,
 });
+const category = axios.create({
+  baseURL: `${baseURL}/category`,
+});
+const subcategory = axios.create({
+  baseURL: `${baseURL}/subcategory`,
+});
+const aboutus = axios.create({
+  baseURL: `${baseURL}/aboutus`,
+});
+const privacy = axios.create({
+  baseURL: `${baseURL}/privacy`,
+});
+const contact = axios.create({
+  baseURL: `${baseURL}/contactus`,
+});
+const terms = axios.create({
+  baseURL: `${baseURL}/term`,
+});
+const faq = axios.create({
+  baseURL: `${baseURL}/faq`,
+});
 
 // Generic request interceptor for all instances
 const requestInterceptor = (req) => {
@@ -38,5 +59,12 @@ export { product };
 signup.interceptors.request.use(requestInterceptor, errorInterceptor);
 login.interceptors.request.use(requestInterceptor, errorInterceptor);
 getquote.interceptors.request.use(requestInterceptor, errorInterceptor);
+category.interceptors.request.use(requestInterceptor, errorInterceptor);
+subcategory.interceptors.request.use(requestInterceptor, errorInterceptor);
+aboutus.interceptors.request.use(requestInterceptor, errorInterceptor);
+privacy.interceptors.request.use(requestInterceptor, errorInterceptor);
+contact.interceptors.request.use(requestInterceptor, errorInterceptor);
+terms.interceptors.request.use(requestInterceptor, errorInterceptor);
+faq.interceptors.request.use(requestInterceptor, errorInterceptor);
 
-export { signup, login, getquote };
+export { signup, login, getquote,category,subcategory,aboutus,privacy,contact,terms,faq };
