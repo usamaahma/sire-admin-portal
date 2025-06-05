@@ -18,7 +18,7 @@ import {
   FileTextOutlined,
   LockOutlined,
   MenuOutlined,
-  FolderAddOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 
 import Dashboard from "./dashboard";
@@ -38,10 +38,11 @@ import Navbarcategory from "./navbarcategory";
 import Subcategory from "./sub-category";
 import "./sider.css";
 import Contact from "./contactus";
+import Blogauthor from "./blogs/blogauthor";
 
 const AdminPortal = () => {
   const [activeContent, setActiveContent] = useState("Dashboard");
-  const [activeTab, setActiveTab] = useState("Blogs");
+  const [activeTab, setActiveTab] = useState("Blog Categories"); // Changed default to Categories
   const [isBlogManagementOpen, setIsBlogManagementOpen] = useState(false);
   const [username, setUsername] = useState("User");
   const navigate = useNavigate();
@@ -60,7 +61,7 @@ const AdminPortal = () => {
       case "Products":
         return <Products />;
       case "Categories":
-        return <Categories setActiveContent={setActiveContent} />; // Pass if needed
+        return <Categories setActiveContent={setActiveContent} />;
       case "Navbar Categories":
         return <Navbarcategory />;
       case "Get a Quote":
@@ -77,6 +78,27 @@ const AdminPortal = () => {
         return (
           <div className="blog-content-container">
             <div className="blog-tabs">
+              {/* 1. Categories First */}
+              <button
+                className={`tab-button ${
+                  activeTab === "Blog Categories" ? "active-tab" : ""
+                }`}
+                onClick={() => setActiveTab("Blog Categories")}
+              >
+                <FolderOutlined /> Categories
+              </button>
+
+              {/* 2. Authors Second */}
+              <button
+                className={`tab-button ${
+                  activeTab === "Blog Authors" ? "active-tab" : ""
+                }`}
+                onClick={() => setActiveTab("Blog Authors")}
+              >
+                <UserOutlined /> Authors
+              </button>
+
+              {/* 3. Blogs Last */}
               <button
                 className={`tab-button ${
                   activeTab === "Blogs" ? "active-tab" : ""
@@ -85,17 +107,11 @@ const AdminPortal = () => {
               >
                 <ReadOutlined /> Blogs
               </button>
-              <button
-                className={`tab-button ${
-                  activeTab === "Blog Categories" ? "active-tab" : ""
-                }`}
-                onClick={() => setActiveTab("Blog Categories")}
-              >
-                <FolderOutlined /> Blog Categories
-              </button>
             </div>
             <div className="tab-content">
-              {activeTab === "Blogs" ? <Blog /> : <Blogcategory />}
+              {activeTab === "Blog Categories" && <Blogcategory />}
+              {activeTab === "Blog Authors" && <Blogauthor />}
+              {activeTab === "Blogs" && <Blog />}
             </div>
           </div>
         );
@@ -107,7 +123,7 @@ const AdminPortal = () => {
         return <Contact />;
       case "Privacy Policy":
         return <PrivacyPolicy />;
-      case "Subcategory": // ✅ Add this
+      case "Subcategory":
         return <Subcategory />;
       default:
         return <Dashboard />;
@@ -141,13 +157,10 @@ const AdminPortal = () => {
     { name: "Terms and Conditions", icon: <FileTextOutlined /> },
     { name: "Privacy Policy", icon: <LockOutlined /> },
     { name: "Contact Us", icon: <FormOutlined /> },
-    // ✅ Optional: You can show Subcategory in sidebar too
-    // { name: "Subcategory", icon: <FolderAddOutlined /> },
   ];
 
   return (
     <div className="admin-portal">
-      {/* Sidebar */}
       <div className="sider">
         <div className="sider-header">
           <h3 className="welcome-message">
@@ -176,7 +189,6 @@ const AdminPortal = () => {
             </button>
           ))}
 
-          {/* Blog Management Dropdown */}
           <div className="blog-management">
             <button
               className={`sider-link dropdown-toggle ${
@@ -197,19 +209,27 @@ const AdminPortal = () => {
               <div className="blog-submenu">
                 <button
                   className={`submenu-link ${
+                    activeTab === "Blog Categories" ? "active-submenu" : ""
+                  }`}
+                  onClick={() => setActiveTab("Blog Categories")}
+                >
+                  <FolderOutlined /> Categories
+                </button>
+                <button
+                  className={`submenu-link ${
+                    activeTab === "Blog Authors" ? "active-submenu" : ""
+                  }`}
+                  onClick={() => setActiveTab("Blog Authors")}
+                >
+                  <UserOutlined /> Authors
+                </button>
+                <button
+                  className={`submenu-link ${
                     activeTab === "Blogs" ? "active-submenu" : ""
                   }`}
                   onClick={() => setActiveTab("Blogs")}
                 >
                   <ReadOutlined /> Blogs
-                </button>
-                <button
-                  className={`submenu-link ${
-                    activeTab === "Blog Categories" ? "active-submenu" : ""
-                  }`}
-                  onClick={() => setActiveTab("Blog Categories")}
-                >
-                  <FolderOutlined /> Blog Categories
                 </button>
               </div>
             )}
@@ -221,7 +241,6 @@ const AdminPortal = () => {
         </nav>
       </div>
 
-      {/* Main Content */}
       <div className="main-content">
         <h1 className="content-heading">
           {menuItems.find((item) => item.name === activeContent)?.icon}

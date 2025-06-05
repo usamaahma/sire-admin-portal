@@ -1,92 +1,60 @@
-import React, { useState } from "react";
-import {
-  Table,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Input,
-  Upload,
-  message,
-} from "antd";
-import {
-  EyeOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
-import { UploadOutlined } from "@ant-design/icons"; // Correct icon import
+import { useState, useEffect } from "react";
+import { Table, Button, Space, Modal, message } from "antd";
+import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import { portfolio, product } from "../utils/axios";
 
 const Portfolio = () => {
-  // State for portfolio data
-  const [portfolio, setPortfolio] = useState([
-    {
-      id: 1,
-      title: "Project 1",
-      image: "https://via.placeholder.com/100",
-      tag: "Web Development",
-    },
-    {
-      id: 2,
-      title: "Project 2",
-      image: "https://via.placeholder.com/100",
-      tag: "Mobile App",
-    },
-    {
-      id: 3,
-      title: "Project 3",
-      image: "https://via.placeholder.com/100",
-      tag: "Design",
-    },
-  ]);
-
-  // State for modal visibility
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState(null);
 
-  // Form state for creating portfolio
-  const [form] = Form.useForm();
+  // Fetch products on component mount
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const response = await product.get('/');
+      console.log(response,"get wala dataaaaaa");
+      setProducts(response.data);
+    } catch (error) {
+      message.error('Failed to fetch products');
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle view button click
   const handleView = (id) => {
-    console.log("View Portfolio Item ID:", id);
-    // Add your view portfolio logic here
+    console.log("View Product ID:", id);
+    // Add your view product logic here
   };
 
-  // Handle edit button click
-  const handleEdit = (id) => {
-    console.log("Edit Portfolio Item ID:", id);
-    // Add your edit portfolio logic here
+  // Handle Add to Portfolio button click
+  const handleAddToPortfolio = (id) => {
+    setSelectedProductId(id);
+    setIsModalVisible(true);
   };
 
-  // Handle delete button click
-  const handleDelete = (id) => {
-    console.log("Delete Portfolio Item ID:", id);
-    setPortfolio(portfolio.filter((item) => item.id !== id));
+  // Handle form submission
+  const handleSubmit = async () => {
+    if (!selectedProductId) return;
+    
+    try {
+      await portfolio.post('/', { productId: selectedProductId });
+      message.success('Product added to portfolio successfully!');
+      setIsModalVisible(false);
+    } catch (error) {
+      message.error('Failed to add product to portfolio');
+      console.error('Error adding to portfolio:', error);
+    }
   };
 
-  // Handle Create Portfolio button click
-  const handleCreate = () => {
-    form
-      .validateFields()
-      .then((values) => {
-        const newPortfolio = {
-          id: portfolio.length + 1,
-          title: values.title,
-          image: values.image[0]?.url || "https://via.placeholder.com/100", // If no image selected, placeholder
-          tag: values.tag,
-        };
-
-        setPortfolio([...portfolio, newPortfolio]);
-        message.success("Portfolio created successfully!");
-        setIsModalVisible(false);
-        form.resetFields(); // Reset form fields after successful creation
-      })
-      .catch((info) => {
-        console.log("Validate Failed:", info);
-      });
-  };
-
-  // Table columns definition
+  // Simplified table columns with only title and image
   const columns = [
     {
       title: "Title",
@@ -98,39 +66,27 @@ const Portfolio = () => {
       dataIndex: "image",
       key: "image",
       render: (image) => (
-        <img src={image} alt="Portfolio" style={{ width: "100px" }} />
-      ), // Render image thumbnail
-    },
-    {
-      title: "Tag",
-      dataIndex: "tag",
-      key: "tag",
+        <img src={image} alt="Product" style={{ width: "100px" }} />
+      ),
     },
     {
       title: "Action",
       key: "action",
-      render: (text, record) => (
+      render: (_, record) => (
         <Space size="middle">
           <Button
             type="primary"
             icon={<EyeOutlined />}
-            onClick={() => handleView(record.id)}
+            onClick={() => handleView(record._id)}
           >
             View
           </Button>
           <Button
-            type="default"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record.id)}
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => handleAddToPortfolio(record._id)}
           >
-            Edit
-          </Button>
-          <Button
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id)}
-          >
-            Delete
+            Add to Portfolio
           </Button>
         </Space>
       ),
@@ -138,89 +94,29 @@ const Portfolio = () => {
   ];
 
   return (
-    <div>
-      <h2>Portfolio Management</h2>
-      {/* Create Portfolio Button */}
-      <Button
-        type="primary"
-        icon={<PlusOutlined />}
-        onClick={() => setIsModalVisible(true)}
-        style={{ marginBottom: "20px" }}
-      >
-        Create Portfolio
-      </Button>
-
-      {/* Portfolio Table */}
+    <div style={{ padding: "20px" }}>
+      <h2>Product Portfolio</h2>
+      
       <Table
         columns={columns}
-        dataSource={portfolio}
+        dataSource={products}
         rowKey="id"
-        pagination={{ pageSize: 5 }} // Optional: Limit the number of rows per page
-        scroll={{ x: "max-content" }} // Horizontal scroll for larger content
-        bordered // Add borders around the table
-        responsive // Automatically adjust table layout based on screen size
-        style={{ width: "80%", margin: "0 auto" }} // Adjust the table width and center it
+        loading={loading}
+        pagination={{ pageSize: 5 }}
+        bordered
+        style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
       />
 
-      {/* Modal for creating portfolio */}
       <Modal
-        title="Create Portfolio"
+        title="Add to Portfolio"
         visible={isModalVisible}
+        onOk={handleSubmit}
         onCancel={() => setIsModalVisible(false)}
-        footer={null}
+        okText="Confirm"
+        cancelText="Cancel"
       >
-        <Form form={form} layout="vertical" onFinish={handleCreate}>
-          <Form.Item
-            label="Title"
-            name="title"
-            rules={[
-              { required: true, message: "Please input the portfolio title!" },
-            ]}
-          >
-            <Input placeholder="Enter portfolio title" />
-          </Form.Item>
-
-          <Form.Item
-            label="Relation Tag"
-            name="tag"
-            rules={[
-              { required: true, message: "Please input a relation tag!" },
-            ]}
-          >
-            <Input placeholder="Enter relation tag (e.g., Web Development, Mobile App)" />
-          </Form.Item>
-
-          <Form.Item
-            label="Image"
-            name="image"
-            valuePropName="fileList"
-            getValueFromEvent={({ fileList }) => fileList}
-            extra="Select an image to represent the portfolio."
-          >
-            <Upload
-              name="image"
-              listType="picture-card"
-              action="/upload"
-              showUploadList={{ showPreviewIcon: false }}
-              accept="image/*"
-              beforeUpload={() => false} // Prevent upload on submit
-            >
-              <div>
-                <UploadOutlined />
-                <div style={{ marginTop: 8 }}>Upload</div>
-              </div>
-            </Upload>
-          </Form.Item>
-
-          <Form.Item>
-            <Space>
-              <Button onClick={() => setIsModalVisible(false)}>Cancel</Button>
-              <Button type="primary" htmlType="submit">
-                Create Portfolio
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
+        <p>Are you sure you want to add this product to your portfolio?</p>
+        <p>Product ID: {selectedProductId}</p>
       </Modal>
     </div>
   );

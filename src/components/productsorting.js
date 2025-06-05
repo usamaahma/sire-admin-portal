@@ -1,19 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Table, Button } from 'antd';
 import { useDrag, useDrop } from 'react-dnd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { product } from "../utils/axios";
 
-const initialProducts = [
-  { _id: '1', name: 'Product A' },
-  { _id: '2', name: 'Product B' },
-  { _id: '3', name: 'Product C' },
-  { _id: '4', name: 'Product D' },
-];
-
 const ProductSorting = () => {
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await product.get("/");
+        setProducts(response.data);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const moveProduct = (dragIndex, hoverIndex) => {
     const draggedItem = products[dragIndex];
@@ -24,8 +33,24 @@ const ProductSorting = () => {
   };
 
   const columns = [
-    { title: 'Product ID', dataIndex: 'id', key: 'id' },
-    { title: 'Product', dataIndex: 'name', key: 'name' },
+    {
+      title: 'Sr. No.',
+      key: 'serialNumber',
+      render: (text, record, index) => index + 1, // Auto-incrementing serial number
+      width: 80,
+      align: 'center'
+    },
+    { 
+      title: 'Product Name', 
+      dataIndex: 'title',
+      key: 'title',
+      render: (text) => text || 'Untitled Product'
+    },
+    { 
+      title: 'Brand', 
+      dataIndex: 'brand', 
+      key: 'brand' 
+    }
   ];
 
   const DraggableTableRow = ({ index, moveProduct, ...restProps }) => {
@@ -50,7 +75,6 @@ const ProductSorting = () => {
   };
 
   const handleSave = async () => {
-    // Send the new sorted product order to the backend
     try {
       const response = await product.post("/", { products });
       console.log(response);
@@ -67,10 +91,16 @@ const ProductSorting = () => {
         columns={columns}
         dataSource={products}
         pagination={false}
+        loading={loading}
         components={{ body: { row: DraggableTableRow } }}
         onRow={(record, index) => ({ index, moveProduct })}
       />
-      <Button type="primary" style={{ marginTop: '16px' }} onClick={handleSave}>
+      <Button 
+        type="primary" 
+        style={{ marginTop: '16px' }} 
+        onClick={handleSave}
+        disabled={loading}
+      >
         Save Sorting
       </Button>
     </div>

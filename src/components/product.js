@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import moment from "moment";
 import {
   Table,
   Button,
@@ -17,45 +17,86 @@ import {
   Row,
   Col,
   Spin,
+  Space,
 } from "antd";
-import { product } from "../utils/axios";
-import {
-  UploadOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
+import { UploadOutlined } from "@ant-design/icons";
+import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
+import { category, product, subcategory } from "../utils/axios";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import ReactQuill from "react-quill";
 import "./product.css";
 
 const { Title } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
+const modules = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ["bold", "italic", "underline"],
+    [{ align: [] }],
+    [{ list: "ordered" }, { list: "bullet" }],
+    ["link", "image"],
+    ["clean"],
+  ],
+};
 
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
   const [form] = Form.useForm();
 
   useEffect(() => {
-    fetchProducts();
+    const fetchInitialData = async () => {
+      try {
+        setIsLoading(true);
+        // Fetch products
+        await fetchProducts();
+
+        // Fetch categories
+        const categoriesResponse = await category.get("/");
+        setCategories(categoriesResponse.data.data || categoriesResponse.data);
+
+        // Fetch subcategories
+        const subcategoriesResponse = await subcategory.get("/");
+        setSubcategories(
+          subcategoriesResponse.data.data || subcategoriesResponse.data
+        );
+      } catch (error) {
+        console.error("Error fetching initial data:", error);
+        message.error("Failed to load initial data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInitialData();
   }, []);
 
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.get("/product");
-      if (response.data.success) {
-        setProducts(response.data.products);
+      const response = await product.get("/");
+
+      if (response.data) {
+        if (Array.isArray(response.data)) {
+          setProducts(response.data);
+        } else if (response.data.success) {
+          setProducts(response.data.data || response.data.products);
+        } else {
+          setProducts(response.data);
+        }
       } else {
-        message.error(response.data.message || "Failed to fetch products");
+        message.error("No data received from server");
       }
     } catch (error) {
       console.error("Error fetching products:", error);
       message.error(
         error.response?.data?.message ||
+          error.message ||
           "An error occurred while fetching products"
       );
     } finally {
@@ -65,10 +106,9 @@ const Products = () => {
 
   const columns = [
     {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      render: (text) => <strong>{text}</strong>,
+      title: "S.No",
+      key: "serial",
+      render: (text, record, index) => <strong>{index + 1}</strong>,
     },
     {
       title: "Title",
@@ -134,22 +174,38 @@ const Products = () => {
         setIsLoading(true);
 
         try {
-          // Prepare product data for creating new product
           const productData = formatProductData(values);
 
-          console.log("Sending product data:", productData); // Debug log
+          console.log("Sending product data:", productData);
 
-          // API call to add new product
-          const response = await product.post("/", productData, {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
+          let response;
+          if (editingProduct) {
+            // Update existing product using PATCH
+            response = await product.patch(
+              `/${editingProduct._id}`,
+              productData,
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+            console.log(response, "patch data here");
+          } else {
+            // Create new product using POST
+            response = await product.post("/", productData, {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            });
+          }
 
-          console.log("API Response:", response); // Debug log
-
-          if (response.data.success) {
-            message.success("Product added successfully");
+          if (response.status === 200 || 201 || response.data.success) {
+            message.success(
+              editingProduct
+                ? "Product updated successfully"
+                : "Product added successfully"
+            );
             fetchProducts();
             setIsModalVisible(false);
             form.resetFields();
@@ -157,7 +213,7 @@ const Products = () => {
             message.error(response.data.message || "Operation failed");
           }
         } catch (error) {
-          console.error("API Error:", error.response || error); // Detailed error log
+          console.error("API Error:", error.response || error);
           message.error(
             error.response?.data?.message ||
               "An error occurred while saving the product"
@@ -171,9 +227,7 @@ const Products = () => {
       });
   };
 
-  // Improved formatProductData function
   const formatProductData = (values) => {
-    // Format sale price effective date if it exists
     let salePriceEffectiveDate;
     if (values.salePriceEffectiveDate) {
       salePriceEffectiveDate = {
@@ -182,24 +236,77 @@ const Products = () => {
       };
     }
 
+    const formattedVariants =
+      values.variants?.map((variant) => ({
+        variantTitle: variant.variantTitle,
+        variantDescription: variant.variantDescription,
+        price: variant.price,
+        salePrice: variant.salePrice,
+        dimensions: {
+          length: variant.dimensions?.length || 0,
+          width: variant.dimensions?.width || 0,
+          height: variant.dimensions?.height || 0,
+          unit: variant.dimensions?.unit || "in",
+        },
+        variantDetail: {
+          material: variant.variantDetail?.material || [],
+          colormodel: variant.variantDetail?.colormodel || [],
+          finishing: variant.variantDetail?.finishing || [],
+          addon: variant.variantDetail?.addon || [],
+          turnaround: variant.variantDetail?.turnaround || [],
+          faqs: variant.variantDetail?.faqs || [],
+        },
+        variantSpecifications:
+          variant.variantSpecifications?.map((spec) => ({
+            image:
+              spec?.image?.[0]?.response?.url || // newly uploaded
+              spec?.image?.[0]?.url || // existing one
+              "aa",
+            title: spec.title,
+            description: spec.description,
+          })) || [],
+        detailTitle: variant.detailTitle,
+        detailSubtitle: variant.detailSubtitle,
+        detailDescription:
+          variant.detailDescription?.map((desc) => ({
+            description: desc.text,
+            image: desc.image?.[0]?.response?.url || desc.image?.[0]?.url,
+          })) || [],
+      })) || [];
+
+    let seoKeywords = [];
+    if (values.seoKeyword) {
+      seoKeywords =
+        typeof values.seoKeyword === "string"
+          ? values.seoKeyword.split(",").map((k) => k.trim())
+          : values.seoKeyword;
+    }
+
     const productData = {
+      gtin: values.gtin,
+      mpn: values.mpn,
       title: values.title,
       description: values.description,
-      gtin: values.gtin, // Add GTIN
-      mpn: values.mpn, // Add MPN
       price: values.price,
-      categories: values.categories ? [String(values.categories)] : [],
-      subcategories: values.subcategories ? [String(values.subcategories)] : [],
-      // Handle image uploads - ensure image is not empty
-     image:
-  values.mainImage?.[0]?.response?.url ||
-  values.mainImage?.[0]?.url ||
-  "https://via.placeholder.com/100",
-     additionalImages:
-      values.additionalImages
-        ?.map((img) => img.response?.url || img.url)
-        .filter((url) => url) || [],
-      // Shipping information
+      priceCurrency: values.priceCurrency,
+      categories: Array.isArray(values.categories)
+        ? values.categories.map((id) => String(id)) // Convert each to string
+        : [],
+      subcategories: Array.isArray(values.subcategories)
+        ? values.subcategories.map((id) => String(id)) // Convert each to string
+        : [],
+      googleProductCategory: values.googleProductCategory,
+      productType: values.productType,
+      image:
+        values.mainImage?.[0]?.response?.url ||
+        values.mainImage?.[0]?.url ||
+        "https://via.placeholder.com/100",
+      pdfImage:
+        values.pdfImage?.[0]?.response?.url || values.pdfImage?.[0]?.url,
+      additionalImages:
+        values.additionalImages
+          ?.map((img) => img.response?.url || img.url)
+          .filter((url) => url) || [],
       shipping: values.shippingCountry
         ? [
             {
@@ -207,29 +314,41 @@ const Products = () => {
               region: values.shippingRegion,
               service: values.shippingService,
               price: values.shippingPrice,
+              minHandlingTime: values.minHandlingTime,
+              maxHandlingTime: values.maxHandlingTime,
             },
           ]
         : [],
-      // Other fields
+      shippingWeight: values.shippingWeightValue
+        ? {
+            value: values.shippingWeightValue,
+            unit: values.shippingWeightUnit,
+          }
+        : undefined,
       ...(values.salePrice && { salePrice: values.salePrice }),
-      ...(salePriceEffectiveDate && {
-        salePriceEffectiveDate: salePriceEffectiveDate,
-      }),
-      // Variants
-      variants:
-        values.variants?.map((variant) => ({
-          ...variant,
-          dimensions: {
-            length: variant.dimensionLength,
-            width: variant.dimensionWidth,
-            height: variant.dimensionHeight,
-            unit: variant.dimensionUnit,
-          },
-          weight: {
-            value: variant.weightValue,
-            unit: variant.weightUnit,
-          },
-        })) || [],
+      ...(salePriceEffectiveDate && { salePriceEffectiveDate }),
+      variants: formattedVariants,
+      specifications: (values.specifications || []).map((spec) => ({
+        ...spec,
+        image:
+          Array.isArray(spec.image) && spec.image.length > 0
+            ? spec.image[0].url
+            : "aa",
+      })),
+      brand: values.brand,
+      condition: values.condition,
+      availability: values.availability,
+      customizable: values.customizable,
+      isBundle: values.isBundle,
+      adult: values.adult,
+      multipack: values.multipack,
+      minimumOrderQuantity: values.minimumOrderQuantity,
+      seoTitle: values.seoTitle,
+      seoDescription: values.seoDescription,
+      seoKeyword: seoKeywords,
+      identifierExists: values.identifierExists,
+      averageRating: values.averageRating,
+      reviews: values.reviews || [],
     };
 
     return productData;
@@ -239,10 +358,26 @@ const Products = () => {
     setEditingProduct(record);
     setIsModalVisible(true);
 
+    let salePriceEffectiveDate = undefined;
+    if (record.salePriceEffectiveDate) {
+      salePriceEffectiveDate = [
+        moment(record.salePriceEffectiveDate.start),
+        moment(record.salePriceEffectiveDate.end),
+      ];
+    }
+
     const formattedData = {
       ...record,
-      categories: record.categories?.[0] || "",
-      subcategories: record.subcategories?.[0] || "",
+      categories: Array.isArray(record.categories)
+        ? record.categories.map((cat) =>
+            typeof cat === "object" ? cat._id : String(cat)
+          )
+        : [],
+      subcategories: Array.isArray(record.subcategories)
+        ? record.subcategories.map((sub) =>
+            typeof sub === "object" ? sub._id : String(sub)
+          )
+        : [],
       shippingCountry: record.shipping?.[0]?.country,
       shippingRegion: record.shipping?.[0]?.region,
       shippingService: record.shipping?.[0]?.service,
@@ -251,16 +386,95 @@ const Products = () => {
       maxHandlingTime: record.shipping?.[0]?.maxHandlingTime,
       shippingWeightValue: record.shippingWeight?.value,
       shippingWeightUnit: record.shippingWeight?.unit,
+      mainImage: record.image
+        ? [
+            {
+              uid: "-1",
+              name: "main-image.png",
+              status: "done",
+              url: record.image,
+            },
+          ]
+        : [],
+      pdfImage: record.pdfImage
+        ? [
+            {
+              uid: "-2",
+              name: "pdf-image.png",
+              status: "done",
+              url: record.pdfImage,
+            },
+          ]
+        : [],
+      additionalImages:
+        record.additionalImages?.map((url, index) => ({
+          uid: `${index}`,
+          name: `image-${index}.png`,
+          status: "done",
+          url,
+        })) || [],
+      salePriceEffectiveDate,
       variants: record.variants?.map((variant) => ({
         ...variant,
-        dimensionLength: variant.dimensions?.length,
-        dimensionWidth: variant.dimensions?.width,
-        dimensionHeight: variant.dimensions?.height,
-        dimensionUnit: variant.dimensions?.unit,
-        weightValue: variant.weight?.value,
-        weightUnit: variant.weight?.unit,
+        dimensions: {
+          length: variant.dimensions?.length || 0,
+          width: variant.dimensions?.width || 0,
+          height: variant.dimensions?.height || 0,
+          unit: variant.dimensions?.unit || "in",
+        },
+        variantDetail: {
+          material: variant.variantDetail?.material || [],
+          colormodel: variant.variantDetail?.colormodel || [],
+          finishing: variant.variantDetail?.finishing || [],
+          addon: variant.variantDetail?.addon || [],
+          turnaround: variant.variantDetail?.turnaround || [],
+          faqs: variant.variantDetail?.faqs || [],
+        },
+        variantSpecifications:
+          variant.variantSpecifications?.map((spec) => ({
+            ...spec,
+            image: spec.image
+              ? [
+                  {
+                    uid: `${Math.random()}`,
+                    name: "spec-image.png",
+                    status: "done",
+                    url: spec.image,
+                  },
+                ]
+              : [],
+          })) || [],
+        detailDescription:
+          variant.detailDescription?.map((desc) => ({
+            description: desc.description,
+            image: desc.image
+              ? [
+                  {
+                    uid: `${Math.random()}`,
+                    name: "desc-image.png",
+                    status: "done",
+                    url: desc.image,
+                  },
+                ]
+              : [],
+          })) || [],
       })),
-      mainImage: record.image ? [{ url: record.image }] : [],
+      specifications:
+        record.specifications?.map((spec) => ({
+          ...spec,
+          image:
+            typeof spec.image === "string" && spec.image
+              ? [
+                  {
+                    uid: `${Math.random()}`,
+                    name: "spec-image.png",
+                    status: "done",
+                    url: spec.image,
+                  },
+                ]
+              : [],
+        })) || [],
+      seoKeyword: record.seoKeyword?.join(", ") || "",
     };
 
     form.setFieldsValue(formattedData);
@@ -276,13 +490,13 @@ const Products = () => {
       onOk: async () => {
         try {
           setIsLoading(true);
-          const response = await axios.delete(`/products/${record.id}`);
+          const response = await product.delete(`/${record._id}`);
 
-          if (response.data.success) {
+          if (response.status === 204 || response.data?.success) {
             message.success("Product deleted successfully");
             fetchProducts();
           } else {
-            message.error(response.data.message || "Failed to delete product");
+            message.error(response.data?.message || "Failed to delete product");
           }
         } catch (error) {
           console.error("Error deleting product:", error);
@@ -307,12 +521,11 @@ const Products = () => {
     formData.append("file", file);
 
     try {
-      const response = await product.post("/", formData, {
+      const response = await product.post("/upload", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
-      console.log(response, "resssssss");
       return response.data.url;
     } catch (error) {
       console.error("Error uploading file:", error);
@@ -339,10 +552,10 @@ const Products = () => {
         <Table
           columns={columns}
           dataSource={products}
-          rowKey="id"
+          rowKey="_id"
           bordered
           className="product-table"
-          pagination={{ pageSize: 5 }}
+          pagination={{ pageSize: 10 }}
           loading={isLoading}
         />
 
@@ -371,7 +584,6 @@ const Products = () => {
               priceCurrency: "USD",
               shippingWeightUnit: "oz",
               dimensionUnit: "in",
-              weightUnit: "oz",
             }}
           >
             <Divider
@@ -415,16 +627,7 @@ const Products = () => {
             <Form.Item
               name="description"
               label="Product Description"
-              rules={[
-                {
-                  required: true,
-                  message: "Please input description!",
-                },
-                {
-                  min: 150,
-                  message: "Description must be at least 150 characters long",
-                },
-              ]}
+              rules={[{ required: true, message: "Please input description!" }]}
             >
               <TextArea
                 rows={4}
@@ -436,41 +639,79 @@ const Products = () => {
               <Col span={12}>
                 <Form.Item
                   name="categories"
-                  label="Category"
+                  label="Categories"
                   rules={[
-                    { required: true, message: "Please select category!" },
+                    {
+                      required: true,
+                      message: "Please select at least one category!",
+                    },
                   ]}
                 >
-                  <Select placeholder="Select category">
-                    <Option value="60d21b4667d0d8992e610c85">
-                      Packaging Boxes
-                    </Option>
-                    <Option value="60d21b4667d0d8992e610c86">
-                      Shipping Supplies
-                    </Option>
-                    <Option value="60d21b4667d0d8992e610c87">
-                      Office Supplies
-                    </Option>
+                  <Select
+                    mode="multiple"
+                    placeholder="Select categories"
+                    optionLabelProp="label"
+                    showArrow
+                    style={{ width: "100%" }}
+                  >
+                    {categories.map((category) => (
+                      <Option
+                        key={category._id}
+                        value={category._id}
+                        label={category.title || category.name}
+                      >
+                        <div style={{ display: "flex", alignItems: "center" }}>
+                          <input
+                            type="checkbox"
+                            checked={undefined} // handled internally by Select
+                            readOnly
+                            style={{ marginRight: 8 }}
+                          />
+                          {category.title || category.name}
+                        </div>
+                      </Option>
+                    ))}
                   </Select>
                 </Form.Item>
               </Col>
               <Col span={12}>
-                <Form.Item name="subcategories" label="Subcategory">
-                  <Select placeholder="Select subcategory">
-                    <Option value="60d21b4967d0d8992e610c87">
-                      Custom Printed Boxes
-                    </Option>
-                    <Option value="60d21b4967d0d8992e610c88">
-                      Corrugated Boxes
-                    </Option>
-                    <Option value="60d21b4967d0d8992e610c89">
-                      Mailer Boxes
-                    </Option>
+                <Form.Item
+                  name="subcategories"
+                  label="Subcategories"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please select at least one subcategory!",
+                    },
+                  ]}
+                >
+                  <Select
+                    mode="multiple"
+                    placeholder="Select subcategories"
+                    optionLabelProp="label"
+                    showArrow
+                    style={{ width: "100%" }}
+                  >
+                    {subcategories.map((subcategory) => (
+                      <Option
+                        key={subcategory._id}
+                        value={subcategory._id}
+                        label={subcategory.title || subcategory.name}
+                      >
+                        <div style={{ display: "flex", alignItems: "center" }}>
+                          <input
+                            type="checkbox"
+                            readOnly
+                            style={{ marginRight: 8 }}
+                          />
+                          {subcategory.title || subcategory.name}
+                        </div>
+                      </Option>
+                    ))}
                   </Select>
                 </Form.Item>
               </Col>
             </Row>
-
             <Form.Item name="productType" label="Product Type">
               <Input placeholder="e.g., Packaging Boxes>Custom Printed Boxes" />
             </Form.Item>
@@ -482,32 +723,26 @@ const Products = () => {
               Images & Media
             </Divider>
 
-   <Form.Item
-  name="mainImage"
-  label="Main Image"
-  valuePropName="fileList"
-  getValueFromEvent={(e) => Array.isArray(e) ? e : e?.fileList}
-  rules={[
-    {
-      required: true,
-      message: "Please upload main image!",
-    }
-  ]}
->
-  <Upload
-    name="mainImage"
-    listType="picture-card"
-    accept="image/*"
-    beforeUpload={() => false} // prevent auto upload
-    maxCount={1}
-  >
-    <div>
-      <PlusOutlined />
-      <div style={{ marginTop: 8 }}>Upload Main Image</div>
-    </div>
-  </Upload>
-</Form.Item>
-
+            <Form.Item
+              name="mainImage"
+              label="Main Image"
+              valuePropName="fileList"
+              getValueFromEvent={normFile}
+              rules={[{ required: true, message: "Please upload main image!" }]}
+            >
+              <Upload
+                name="mainImage"
+                listType="picture-card"
+                accept="image/*"
+                beforeUpload={() => false}
+                maxCount={1}
+              >
+                <div>
+                  <PlusOutlined />
+                  <div style={{ marginTop: 8 }}>Upload Main Image</div>
+                </div>
+              </Upload>
+            </Form.Item>
 
             <Form.Item
               name="pdfImage"
@@ -537,7 +772,7 @@ const Products = () => {
               <Upload
                 name="additionalImages"
                 listType="picture-card"
-                multiple
+                multipe
                 beforeUpload={() => false}
               >
                 <div>
@@ -566,7 +801,7 @@ const Products = () => {
                     min={0}
                     step={0.01}
                     placeholder="29.99"
-                    formatter={(value) => `$ ${value}`}
+                    formatter={(value) => `£ ${value}`}
                   />
                 </Form.Item>
               </Col>
@@ -577,14 +812,14 @@ const Products = () => {
                     min={0}
                     step={0.01}
                     placeholder="24.99"
-                    formatter={(value) => `$ ${value}`}
+                    formatter={(value) => `£ ${value}`}
                   />
                 </Form.Item>
               </Col>
               <Col span={8}>
                 <Form.Item name="priceCurrency" label="Currency">
                   <Select disabled>
-                    <Option value="USD">USD</Option>
+                    <Option value="GBP">GBP</Option>
                   </Select>
                 </Form.Item>
               </Col>
@@ -648,54 +883,65 @@ const Products = () => {
 
             <Row gutter={16}>
               <Col span={6}>
-                <Form.Item name="shippingCountry" label="Country">
-                  <Input placeholder="e.g., US" />
+                <Form.Item
+                  name="shippingCountry"
+                  label="Country"
+                  initialValue="UK"
+                >
+                  <Input placeholder="e.g., UK" />
                 </Form.Item>
               </Col>
               <Col span={6}>
-                <Form.Item name="shippingRegion" label="Region">
-                  <Input placeholder="e.g., California" />
+                <Form.Item
+                  name="shippingRegion"
+                  label="Region"
+                  initialValue="Scotland"
+                >
+                  <Input placeholder="e.g., Scotland" />
                 </Form.Item>
               </Col>
               <Col span={6}>
-                <Form.Item name="shippingService" label="Service">
+                <Form.Item
+                  name="shippingService"
+                  label="Service"
+                  initialValue="Standard"
+                >
                   <Input placeholder="e.g., Standard" />
                 </Form.Item>
               </Col>
               <Col span={6}>
-                <Form.Item name="shippingPrice" label="Price">
+                <Form.Item name="shippingPrice" label="Price" initialValue={0}>
                   <InputNumber
                     style={{ width: "100%" }}
                     min={0}
                     step={0.01}
-                    placeholder="5.00"
+                    placeholder="0.00"
                   />
                 </Form.Item>
               </Col>
             </Row>
-
             {/* <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="shippingWeightValue" label="Shipping Weight">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  step={0.1}
-                  placeholder="16"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="shippingWeightUnit" label="Unit">
-                <Select>
-                  <Option value="oz">oz</Option>
-                  <Option value="lb">lb</Option>
-                  <Option value="g">g</Option>
-                  <Option value="kg">kg</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row> */}
+              <Col span={8}>
+                <Form.Item name="shippingWeightValue" label="Shipping Weight">
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    min={0}
+                    step={0.1}
+                    placeholder="16"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="shippingWeightUnit" label="Unit">
+                  <Select>
+                    <Option value="oz">oz</Option>
+                    <Option value="lb">lb</Option>
+                    <Option value="g">g</Option>
+                    <Option value="kg">kg</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row> */}
 
             <Row gutter={16}>
               <Col span={8}>
@@ -858,35 +1104,6 @@ const Products = () => {
                         </Col>
                       </Row>
 
-                      <Divider orientation="left" style={{ fontSize: "14px" }}>
-                        Weight
-                      </Divider>
-                      <Row gutter={16}>
-                        <Col span={12}>
-                          <Form.Item
-                            {...restField}
-                            name={[name, "weight", "value"]}
-                            label="Weight Value"
-                          >
-                            <InputNumber
-                              style={{ width: "100%" }}
-                              min={0}
-                              step={0.1}
-                            />
-                          </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                          <Form.Item
-                            {...restField}
-                            name={[name, "weight", "unit"]}
-                            label="Unit"
-                          >
-                            <Input placeholder="e.g., oz, g" />
-                          </Form.Item>
-                        </Col>
-                      </Row>
-
-                      {/* ========== Material ========== */}
                       <Divider orientation="left">Material</Divider>
                       <Form.List name={[name, "variantDetail", "material"]}>
                         {(fields, { add, remove }) => (
@@ -934,7 +1151,6 @@ const Products = () => {
                         )}
                       </Form.List>
 
-                      {/* ========== Color Model ========== */}
                       <Divider orientation="left">Color Model</Divider>
                       <Form.List name={[name, "variantDetail", "colormodel"]}>
                         {(fields, { add, remove }) => (
@@ -982,7 +1198,6 @@ const Products = () => {
                         )}
                       </Form.List>
 
-                      {/* ========== Finishing ========== */}
                       <Divider orientation="left">Finishing</Divider>
                       <Form.List name={[name, "variantDetail", "finishing"]}>
                         {(fields, { add, remove }) => (
@@ -1030,7 +1245,6 @@ const Products = () => {
                         )}
                       </Form.List>
 
-                      {/* ========== Add-ons ========== */}
                       <Divider orientation="left">Add-ons</Divider>
                       <Form.List name={[name, "variantDetail", "addon"]}>
                         {(fields, { add, remove }) => (
@@ -1069,7 +1283,6 @@ const Products = () => {
                         )}
                       </Form.List>
 
-                      {/* ========== Turnaround ========== */}
                       <Divider orientation="left">Turnaround</Divider>
                       <Form.List name={[name, "variantDetail", "turnaround"]}>
                         {(fields, { add, remove }) => (
@@ -1117,7 +1330,6 @@ const Products = () => {
                         )}
                       </Form.List>
 
-                      {/* ========== FAQs ========== */}
                       <Divider orientation="left">FAQs</Divider>
                       <Form.List name={[name, "variantDetail", "faqs"]}>
                         {(fields, { add, remove }) => (
@@ -1181,13 +1393,10 @@ const Products = () => {
                         )}
                       </Form.List>
 
-                      {/* ========== Variant Specifications (Updated UI/UX) ========== */}
                       <Divider orientation="left">
                         Variant Specifications
                       </Divider>
-                      <Form.List
-                        name={[name, "variantDetail", "variantSpecifications"]}
-                      >
+                      <Form.List name={[name, "variantSpecifications"]}>
                         {(fields, { add, remove }) => (
                           <>
                             {fields.map(
@@ -1224,10 +1433,9 @@ const Products = () => {
                                         {...restField}
                                         name={[fieldName, "image"]}
                                         valuePropName="fileList"
-                                        getValueFromEvent={(e) => {
-                                          if (Array.isArray(e)) return e;
-                                          return e && e.fileList;
-                                        }}
+                                        getValueFromEvent={(e) =>
+                                          Array.isArray(e) ? e : e?.fileList
+                                        }
                                         rules={[
                                           {
                                             required: true,
@@ -1235,45 +1443,10 @@ const Products = () => {
                                           },
                                         ]}
                                       >
-                                        <Upload
-                                          listType="picture-card"
-                                          maxCount={1}
-                                          beforeUpload={(file) => {
-                                            const isValidType =
-                                              file.type === "image/jpeg" ||
-                                              file.type === "image/png" ||
-                                              file.type === "image/webp";
-                                            if (!isValidType) {
-                                              message.error(
-                                                "You can only upload JPG/PNG/WEBP file!"
-                                              );
-                                              return Upload.LIST_IGNORE;
-                                            }
-                                            const isLt2M =
-                                              file.size / 1024 / 1024 < 2;
-                                            if (!isLt2M) {
-                                              message.error(
-                                                "Image must smaller than 2MB!"
-                                              );
-                                              return Upload.LIST_IGNORE;
-                                            }
-                                            return true;
-                                          }}
-                                          customRequest={({
-                                            file,
-                                            onSuccess,
-                                          }) => {
-                                            setTimeout(() => {
-                                              onSuccess("ok");
-                                            }, 0);
-                                          }}
-                                        >
-                                          <div>
-                                            <PlusOutlined />
-                                            <div style={{ marginTop: 8 }}>
-                                              Upload
-                                            </div>
-                                          </div>
+                                        <Upload listType="picture" maxCount={1}>
+                                          <Button icon={<UploadOutlined />}>
+                                            Upload
+                                          </Button>
                                         </Upload>
                                       </Form.Item>
                                     </Col>
@@ -1361,6 +1534,7 @@ const Products = () => {
                 </>
               )}
             </Form.List>
+
             <Divider
               orientation="left"
               style={{ fontWeight: "bold", fontSize: "16px" }}
@@ -1427,170 +1601,213 @@ const Products = () => {
             <Form.Item name="seoKeyword" label="SEO Keywords">
               <Input placeholder="Enter keywords separated by commas (e.g., custom boxes, printed packaging)" />
             </Form.Item>
+
             <Divider
               orientation="left"
               style={{ fontWeight: "bold", fontSize: "16px" }}
             >
-              Detail Description
+              Product Specifications
             </Divider>
-            <Form.List name="variants">
+
+            <Form.List name="specifications">
               {(fields, { add, remove }) => (
                 <>
-                  {fields.map(({ key, name: fieldIndex, ...restField }) => (
-                    <div key={key}>
-                      {/* Other variant fields can go here */}
+                  {fields.map(({ key, name, ...restField }) => (
+                    <div
+                      key={key}
+                      style={{
+                        marginBottom: 16,
+                        border: "1px solid #d9d9d9",
+                        padding: 16,
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Row gutter={16} justify="center">
+                        <Col span={24} style={{ marginBottom: 8 }}>
+                          <div
+                            style={{
+                              fontWeight: "bold",
+                              fontSize: 16,
+                              textAlign: "center",
+                            }}
+                          >
+                            Specification Image
+                          </div>
+                        </Col>
+                        <Col
+                          span={24}
+                          style={{ textAlign: "center", marginBottom: 16 }}
+                        >
+                          <Form.Item
+                            name="image"
+                            valuePropName="fileList"
+                            getValueFromEvent={normFile}
+                            rules={[
+                              {
+                                required: true,
+                                message: "Please upload an image!",
+                              },
+                            ]}
+                          >
+                            <Upload maxCount={1} listType="picture">
+                              <Button icon={<UploadOutlined />}>
+                                Upload Image
+                              </Button>
+                            </Upload>
+                          </Form.Item>
+                        </Col>
+                      </Row>
 
-                      {/* Variant Details Form.List */}
-                      <Form.List
-                        name={[fieldIndex, "variantDetail", "variantDetails"]}
+                      <Row gutter={16} align="middle">
+                        <Col span={8}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, "title"]}
+                            rules={[{ required: true, message: "Enter title" }]}
+                          >
+                            <Input placeholder="Specification Title" />
+                          </Form.Item>
+                        </Col>
+                        <Col span={14}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, "description"]}
+                            rules={[
+                              { required: true, message: "Enter description" },
+                            ]}
+                          >
+                            <TextArea
+                              placeholder="Specification Description"
+                              rows={4}
+                              style={{ resize: "vertical" }}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col span={2}>
+                          <Button
+                            type="link"
+                            danger
+                            onClick={() => remove(name)}
+                          >
+                            Remove
+                          </Button>
+                        </Col>
+                      </Row>
+                    </div>
+                  ))}
+                  <Form.Item>
+                    <Button
+                      type="dashed"
+                      onClick={() => add()}
+                      block
+                      icon={<PlusOutlined />}
+                    >
+                      Add Specification
+                    </Button>
+                  </Form.Item>
+                </>
+              )}
+            </Form.List>
+            <Form.List name="details">
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(({ key, name, ...restField }) => (
+                    <div
+                      key={key}
+                      style={{
+                        border: "1px solid #ddd",
+                        padding: 16,
+                        marginBottom: 20,
+                      }}
+                    >
+                      <Space
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                        align="baseline"
                       >
-                        {(
-                          detailFields,
-                          { add: addDetail, remove: removeDetail }
-                        ) => (
+                        <h4>Detail Block</h4>
+                        <MinusCircleOutlined onClick={() => remove(name)} />
+                      </Space>
+
+                      <Form.Item
+                        {...restField}
+                        name={[name, "title"]}
+                        label="Detail Title"
+                        rules={[{ required: true }]}
+                      >
+                        <Input placeholder="Enter title" />
+                      </Form.Item>
+
+                      <Form.Item
+                        {...restField}
+                        name={[name, "subtitle"]}
+                        label="Detail Subtitle"
+                      >
+                        <Input placeholder="Enter subtitle" />
+                      </Form.Item>
+
+                      {/* Description Blocks (nested Form.List) */}
+                      <Form.List name={[name, "descriptions"]}>
+                        {(descFields, { add: addDesc, remove: removeDesc }) => (
                           <>
-                            {detailFields.map(
-                              ({ key, name: fieldName, ...restField }) => (
-                                <div
-                                  key={key}
+                            {descFields.map((descField) => (
+                              <div
+                                key={descField.key}
+                                style={{
+                                  marginBottom: 20,
+                                  background: "#fafafa",
+                                  padding: 10,
+                                }}
+                              >
+                                <Space
                                   style={{
-                                    marginBottom: 16,
-                                    border: "1px solid #d9d9d9",
-                                    padding: 16,
-                                    borderRadius: 4,
-                                    backgroundColor: "#fafafa",
+                                    display: "flex",
+                                    justifyContent: "space-between",
                                   }}
+                                  align="baseline"
                                 >
-                                  <Row gutter={16}>
-                                    <Col span={12}>
-                                      <Form.Item
-                                        {...restField}
-                                        name={[fieldName, "title"]}
-                                        label="Detail Title"
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message: "Enter detail title",
-                                          },
-                                        ]}
-                                      >
-                                        <Input placeholder="e.g., Eco-Friendly Material" />
-                                      </Form.Item>
-                                    </Col>
-                                    <Col span={12}>
-                                      <Form.Item
-                                        {...restField}
-                                        name={[fieldName, "subtitle"]}
-                                        label="Detail Sub-title"
-                                      >
-                                        <Input placeholder="Optional sub-title" />
-                                      </Form.Item>
-                                    </Col>
-                                  </Row>
+                                  <h5>Description Block</h5>
+                                  <MinusCircleOutlined
+                                    onClick={() => removeDesc(descField.name)}
+                                  />
+                                </Space>
 
-                                  <Form.Item
-                                    {...restField}
-                                    name={[fieldName, "description"]}
-                                    label="Description"
-                                    rules={[
-                                      {
-                                        required: true,
-                                        message: "Enter description",
-                                      },
-                                    ]}
-                                  >
-                                    <ReactQuill
-                                      theme="snow"
-                                      placeholder="Enter rich text description..."
-                                    />
-                                  </Form.Item>
+                                <Form.Item
+                                  name={[descField.name, "image"]}
+                                  valuePropName="fileList"
+                                  getValueFromEvent={normFile}
+                                  label="Image"
+                                >
+                                  <Upload listType="picture" maxCount={1}>
+                                    <Button icon={<UploadOutlined />}>
+                                      Upload
+                                    </Button>
+                                  </Upload>
+                                </Form.Item>
 
-                                  <Form.Item
-                                    {...restField}
-                                    name={[fieldName, "image"]}
-                                    label="Image"
-                                    valuePropName="fileList"
-                                    getValueFromEvent={(e) =>
-                                      Array.isArray(e) ? e : e?.fileList
-                                    }
-                                    rules={[
-                                      {
-                                        required: true,
-                                        message: "Please upload an image",
-                                      },
-                                    ]}
-                                  >
-                                    <Upload
-                                      listType="picture-card"
-                                      maxCount={1}
-                                      beforeUpload={(file) => {
-                                        const isValidType = [
-                                          "image/jpeg",
-                                          "image/png",
-                                          "image/webp",
-                                        ].includes(file.type);
-                                        if (!isValidType) {
-                                          message.error(
-                                            "Only JPG/PNG/WEBP files allowed!"
-                                          );
-                                          return Upload.LIST_IGNORE;
-                                        }
-                                        const isLt2M =
-                                          file.size / 1024 / 1024 < 2;
-                                        if (!isLt2M) {
-                                          message.error(
-                                            "Image must be smaller than 2MB!"
-                                          );
-                                          return Upload.LIST_IGNORE;
-                                        }
-                                        return true;
-                                      }}
-                                      customRequest={({ file, onSuccess }) => {
-                                        setTimeout(() => onSuccess("ok"), 0);
-                                      }}
-                                    >
-                                      <div>
-                                        <PlusOutlined />
-                                        <div style={{ marginTop: 8 }}>
-                                          Upload
-                                        </div>
-                                      </div>
-                                    </Upload>
-                                  </Form.Item>
-
-                                  <Button
-                                    type="link"
-                                    danger
-                                    onClick={() => removeDetail(fieldName)}
-                                  >
-                                    Remove Detail
-                                  </Button>
-                                </div>
-                              )
-                            )}
-
+                                <Form.Item
+                                  name={[descField.name, "text"]}
+                                  label="Description Text"
+                                >
+                                  <ReactQuill theme="snow" modules={modules} />
+                                </Form.Item>
+                              </div>
+                            ))}
                             <Form.Item>
                               <Button
                                 type="dashed"
-                                onClick={() => addDetail()}
+                                onClick={() => addDesc()}
                                 block
                                 icon={<PlusOutlined />}
                               >
-                                Add Description data
+                                Add Description Block
                               </Button>
                             </Form.Item>
                           </>
                         )}
                       </Form.List>
-
-                      {/* Remove Variant Button */}
-                      <Button
-                        type="danger"
-                        onClick={() => remove(fieldIndex)}
-                        style={{ marginTop: 16 }}
-                      >
-                        Remove Variant
-                      </Button>
                     </div>
                   ))}
 
@@ -1601,7 +1818,7 @@ const Products = () => {
                       block
                       icon={<PlusOutlined />}
                     >
-                      Add Detail Description
+                      Add Detail
                     </Button>
                   </Form.Item>
                 </>

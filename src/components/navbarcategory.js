@@ -1,44 +1,117 @@
 import { useState, useEffect } from 'react';
 import './navbarcategory.css';
 import { message } from 'antd';
-import { category } from "../utils/axios";  
+import { category, navitems } from "../utils/axios";
 
 function Navbarcategory() {
   const [categories, setCategories] = useState([]);
+  const [navItems, setNavItems] = useState([]);
   const [maxVisible, setMaxVisible] = useState(6);
+  const [selectedNavItem, setSelectedNavItem] = useState(null);
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
-        const response = await category.get("/");
-        const formatted = response.data.map((item, index) => ({
-          id: item._id || index + 1, // Use item._id if available
-          name: item.name || item.title || `Category ${index + 1}`, // Fallback to title or generic
-          visible: index < 6, // Default: first 6 visible
+        // Fetch all categories
+        const categoryResponse = await category.get("/");
+        const formattedCategories = categoryResponse.data.map((item, index) => ({
+          id: item._id,
+          name: item.title || `Category ${index + 1}`,
+          visible: false, // Initially all categories are hidden
         }));
-        setCategories(formatted);
+        setCategories(formattedCategories);
+
+        // Fetch navitems
+        const navItemsResponse = await navitems.get("/");
+        setNavItems(navItemsResponse.data);
+
+        // If there's at least one navItem, set the first one as selected and update visibility
+        if (navItemsResponse.data.length > 0) {
+          const firstNavItem = navItemsResponse.data[0];
+          setSelectedNavItem(firstNavItem._id);
+          setCategories(prev => prev.map(cat => ({
+            ...cat,
+            visible: firstNavItem.categories.some(c => c._id === cat.id)
+          })));
+        }
       } catch (error) {
-        console.error("Error fetching categories:", error);
-        message.error("Failed to load categories. Please try again later.");
+        console.error("Error fetching data:", error);
+        message.error("Failed to load data. Please try again later.");
       }
     };
 
-    fetchCategories();
+    fetchData();
   }, []);
 
-  const toggleVisibility = (id) => {
-    setCategories(categories.map(category =>
-      category.id === id ? { ...category, visible: !category.visible } : category
-    ));
+  const handleNavItemSelect = async (navItemId) => {
+    try {
+      const navItemResponse = await navitems.get(`/${navItemId}`);
+      setSelectedNavItem(navItemId);
+      setCategories(prev => prev.map(cat => ({
+        ...cat,
+        visible: navItemResponse.data.categories.some(c => c._id === cat.id)
+      })));
+    } catch (error) {
+      console.error("Error fetching navitem:", error);
+      message.error("Failed to load navitem data.");
+    }
   };
 
-  const makeVisible = (id) => {
-    const visibleCount = categories.filter(c => c.visible).length;
-    if (visibleCount >= maxVisible) {
-      alert(`Maximum ${maxVisible} categories can be visible at a time.`);
+  const toggleVisibility = async (categoryId) => {
+    if (!selectedNavItem) {
+      message.error("Please select or create a NavItem first.");
       return;
     }
-    toggleVisibility(id);
+
+    const visibleCount = categories.filter(c => c.visible).length;
+    const categoryToToggle = categories.find(c => c.id === categoryId);
+
+    if (!categoryToToggle.visible && visibleCount >= maxVisible) {
+      message.error(`Maximum ${maxVisible} categories can be visible at a time.`);
+      return;
+    }
+
+    try {
+      const navItemResponse = await navitems.get(`/${selectedNavItem}`);
+      const currentCategories = navItemResponse.data.categories.map(c => c._id);
+      
+      let updatedCategories;
+      if (categoryToToggle.visible) {
+        updatedCategories = currentCategories.filter(id => id !== categoryId);
+      } else {
+        updatedCategories = [...currentCategories, categoryId];
+      }
+
+      await navitems.put(`/${selectedNavItem}`, {
+        categories: updatedCategories,
+        isActive: true,
+      });
+
+      setCategories(prev => prev.map(category =>
+        category.id === categoryId ? { ...category, visible: !category.visible } : category
+      ));
+      message.success("Category visibility updated successfully.");
+    } catch (error) {
+      console.error("Error updating navitem:", error);
+      message.error("Failed to update category visibility.");
+    }
+  };
+
+  const createNewNavItem = async () => {
+    try {
+      const response = await navitems.post("/", {
+        categories: [],
+        isActive: true,
+        position: navItems.length,
+      });
+      setNavItems([...navItems, response.data]);
+      setSelectedNavItem(response.data._id);
+      setCategories(prev => prev.map(cat => ({ ...cat, visible: false })));
+      message.success("New NavItem created successfully.");
+    } catch (error) {
+      console.error("Error creating navitem:", error);
+      message.error("Failed to create new NavItem.");
+    }
   };
 
   return (
@@ -55,6 +128,23 @@ function Navbarcategory() {
             max="9"
           />
         </label>
+        <div>
+          <label>Select NavItem:</label>
+          <select
+            value={selectedNavItem || ""}
+            onChange={(e) => handleNavItemSelect(e.target.value)}
+          >
+            <option value="" disabled>Select a NavItem</option>
+            {navItems.map(navItem => (
+              <option key={navItem._id} value={navItem._id}>
+                NavItem {navItem.position + 1} {navItem.isActive ? "(Active)" : "(Inactive)"}
+              </option>
+            ))}
+          </select>
+          <button onClick={createNewNavItem} style={{ marginLeft: '10px' }}>
+            Create New NavItem
+          </button>
+        </div>
       </div>
 
       <div className="categories-section">
@@ -85,7 +175,7 @@ function Navbarcategory() {
                 <span>{category.name}</span>
                 <button
                   className="show-button"
-                  onClick={() => makeVisible(category.id)}
+                  onClick={() => toggleVisibility(category.id)}
                 >
                   Show
                 </button>

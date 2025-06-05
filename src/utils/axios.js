@@ -2,7 +2,7 @@ import axios from "axios";
 const baseURL = process.env.REACT_APP_API_URL; // Make sure your .env file is correctly set
 
 // Create instances with consistent base URLs for each service
- 
+
 const product = axios.create({
   baseURL: `${baseURL}/products`,
 });
@@ -38,6 +38,21 @@ const terms = axios.create({
 const faq = axios.create({
   baseURL: `${baseURL}/faq`,
 });
+const blogcategorys = axios.create({
+  baseURL: `${baseURL}/blogcategory`,
+});
+const blogauthors = axios.create({
+  baseURL: `${baseURL}/blogauthor`,
+});
+const blogss = axios.create({
+  baseURL: `${baseURL}/blogs`,
+});
+const navitems = axios.create({
+  baseURL: `${baseURL}/navitems`,
+});
+const portfolio = axios.create({
+  baseURL: `${baseURL}/portfolio`,
+});
 
 // Generic request interceptor for all instances
 const requestInterceptor = (req) => {
@@ -66,5 +81,26 @@ privacy.interceptors.request.use(requestInterceptor, errorInterceptor);
 contact.interceptors.request.use(requestInterceptor, errorInterceptor);
 terms.interceptors.request.use(requestInterceptor, errorInterceptor);
 faq.interceptors.request.use(requestInterceptor, errorInterceptor);
+blogcategorys.interceptors.request.use(requestInterceptor, errorInterceptor);
+blogauthors.interceptors.request.use(requestInterceptor, errorInterceptor);
+blogss.interceptors.request.use(requestInterceptor, errorInterceptor);
+navitems.interceptors.request.use(requestInterceptor, errorInterceptor);
+portfolio.interceptors.request.use(requestInterceptor, errorInterceptor);
 
-export { signup, login, getquote,category,subcategory,aboutus,privacy,contact,terms,faq };
+export {
+  signup,
+  login,
+  getquote,
+  category,
+  subcategory,
+  aboutus,
+  privacy,
+  contact,
+  terms,
+  faq,
+  blogcategorys,
+  blogauthors,
+  blogss,
+  navitems,
+  portfolio,
+};
