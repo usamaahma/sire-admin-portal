@@ -1,0 +1,88 @@
+/* Dashboard Container */
+.dashboard-container {
+  padding: 20px;
+  background-color: #e3f2fd; /* Light blue background */
+}
+
+/* Dashboard Card */
+.dashboard-card {
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* Hover Effect for Cards */
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Title of Each Card */
+.dashboard-card-title {
+  font-size: 18px;
+  margin-top: 10px;
+  color: #0d47a1; /* Dark blue for the card title */
+}
+
+/* Icon Style for Each Card */
+.dashboard-card-icon {
+  font-size: 30px;
+  margin-bottom: 10px;
+  color: #2196f3; /* Blue color for the icons */
+}
+
+/* Card Value Style */
+.dashboard-card .ant-statistic-content-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #0d47a1; /* Dark blue for the values */
+}
+
+/* Chart Section Styling */
+.dashboard-chart {
+  margin-top: 30px;
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Chart Title */
+.dashboard-chart h2 {
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 24px;
+  color: #0d47a1; /* Dark blue for the title */
+}
+
+/* Center Align Cards */
+.ant-row {
+  justify-content: center;
+  align-items: center;
+}
+
+/* Bar Chart Style */
+.recharts-wrapper .recharts-bar-rectangles .recharts-bar-rectangle {
+  fill: #2196f3; /* Blue for bars in the chart */
+}
+
+/* Ant Card Body Styling */
+.ant-card-body {
+  padding: 20px !important;
+  background-color: #fff;
+}
+
+/* Card Background Colors based on Types */
+.dashboard-card-total-orders {
+  background-color: #2196f3; /* Blue for Orders */
+}
+
+.dashboard-card-products {
+  background-color: #64b5f6; /* Light Blue for Products */
+}
+
+.dashboard-card-total-sales {
+  background-color: #1976d2; /* Darker Blue for Sales */
+}

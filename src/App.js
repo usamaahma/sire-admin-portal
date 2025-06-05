@@ -1,11 +1,8 @@
-import "./App.css";
+import React from "react";
+import AppRoutes from "./components/routes/routes";
 
-function App() {
-  return (
-    <div className="App">
-      <h1>Sire Printing Admin Portal</h1>
-    </div>
-  );
-}
+const App = () => {
+  return <AppRoutes />;
+};
 
 export default App;
