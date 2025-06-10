@@ -581,7 +581,7 @@ const Products = () => {
               customizable: true,
               condition: "new",
               availability: "in stock",
-              priceCurrency: "USD",
+              priceCurrency: "GBP",
               shippingWeightUnit: "oz",
               dimensionUnit: "in",
             }}
