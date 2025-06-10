@@ -7,17 +7,12 @@ import {
   message,
   Form,
   Input,
-  Upload,
   Image,
   Row,
   Col,
   Card,
-  Tag,
   Divider,
-  Select,
 } from "antd";
-import { category } from "../utils/axios";
-import Subcategory from "./sub-category";
 import {
   EyeOutlined,
   EditOutlined,
@@ -30,35 +25,14 @@ import {
   ArrowDownOutlined,
   FolderAddOutlined,
 } from "@ant-design/icons";
+import CloudinaryUploader from "./cloudinary/CloudinaryUploader";
+import { category } from "../utils/axios";
+import Subcategory from "./sub-category";
 import "./categories.css";
 
 const Categories = ({ setActiveContent }) => {
-  // Example categories data
-
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
-  const [categories, setCategories] = useState([
-    {
-      id: 1,
-      shortTitle: "Electronics",
-      descriptionTitle: "Electronics Collection",
-      description: "All kinds of electronic products",
-      categoryImage: "https://via.placeholder.com/150",
-      pageImage: "https://via.placeholder.com/300",
-      seoDescription: "Best electronics at great prices",
-      seoKeywords: "electronics, gadgets, devices",
-    },
-    {
-      id: 2,
-      shortTitle: "Furniture",
-      descriptionTitle: "Furniture Collection",
-      description: "Modern and vintage furniture",
-      categoryImage: "https://via.placeholder.com/150",
-      pageImage: "https://via.placeholder.com/300",
-      seoDescription: "Quality furniture for your home",
-      seoKeywords: "furniture, home, decor",
-    },
-  ]);
-
+  const [categories, setCategories] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -66,6 +40,47 @@ const Categories = ({ setActiveContent }) => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [sortedCategories, setSortedCategories] = useState([]);
   const [form] = Form.useForm();
+
+  // Cloudinary configuration
+  const cloudName = "dxhpud7sx"; // Replace with your Cloudinary cloud name
+  const uploadPreset = "sireprinting"; // Replace with your Cloudinary upload preset
+
+  // Fetch categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await category.get("/");
+        const formattedData = response.data.map((item, index) => ({
+          id: index + 1,
+          _id: item._id,
+          shortTitle: item.title,
+          description: item.description,
+          categoryImage: item.image,
+          pageImage: item.pageImage,
+          seoDescription: item.seoDescription,
+          seoKeywords: item.seoKeyword,
+          details: item.details || [],
+        }));
+        setCategories(formattedData);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        message.error("Failed to load categories. Please try again later.");
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // View Category
+  const handleView = (id) => {
+    const category = categories.find((category) => category._id === id);
+    if (!category) {
+      console.error("Category not found for ID:", id);
+      return;
+    }
+    setSelectedCategory(category);
+    setIsViewModalVisible(true);
+  };
 
   // Edit Category
   const handleEdit = (id) => {
@@ -75,19 +90,18 @@ const Categories = ({ setActiveContent }) => {
       return;
     }
 
-    // Build form values safely
     const formValues = {
       ...category,
+      shortTitle: category.shortTitle,
+      description: category.description,
       categoryImage: category.categoryImage
         ? [
             {
               uid: "-1",
               name: "category-image.png",
               status: "done",
-              url:
-                typeof category.categoryImage === "string"
-                  ? category.categoryImage
-                  : undefined,
+              url: category.categoryImage,
+              thumbUrl: category.categoryImage,
             },
           ]
         : [],
@@ -97,35 +111,30 @@ const Categories = ({ setActiveContent }) => {
               uid: "-2",
               name: "page-image.png",
               status: "done",
-              url:
-                typeof category.pageImage === "string"
-                  ? category.pageImage
-                  : undefined,
+              url: category.pageImage,
+              thumbUrl: category.pageImage,
             },
           ]
         : [],
-      seoKeywords:
-        typeof category.seoKeywords === "string"
-          ? category.seoKeywords?.split(",").map((k) => k.trim())
+      seoTitle: category.seoTitle,
+      seoDescription: category.seoDescription,
+      seoKeywords: category.seoKeywords?.split(",").map((k) => k.trim()) || [],
+      detailTitle: category.detailTitle,
+      detailSubtitle: category.detailSubtitle,
+      details: (category.details || []).map((detail, index) => ({
+        detailDescription: detail.detailDescription,
+        image: detail.image
+          ? [
+              {
+                uid: `detail-${index}`,
+                name: `detail-image-${index}.png`,
+                status: "done",
+                url: detail.image,
+                thumbUrl: detail.image,
+              },
+            ]
           : [],
-      details: Array.isArray(category.details)
-        ? category.details.map((detail, index) => ({
-            detailDescription: detail.detailDescription || "",
-            image: detail.image
-              ? [
-                  {
-                    uid: `detail-${index}`,
-                    name: `detail-image-${index}.png`,
-                    status: "done",
-                    url:
-                      typeof detail.image === "string"
-                        ? detail.image
-                        : undefined,
-                  },
-                ]
-              : [],
-          }))
-        : [],
+      })),
     };
 
     form.setFieldsValue(formValues);
@@ -139,12 +148,8 @@ const Categories = ({ setActiveContent }) => {
       title: "Are you sure you want to delete this category?",
       onOk: async () => {
         try {
-          // ✅ Correct: Send DELETE request with category ID in the URL
           await category.delete(`/${id}`);
-
-          // ✅ Update local state to remove the deleted category
           setCategories(categories.filter((category) => category._id !== id));
-
           message.success("Category deleted successfully");
         } catch (error) {
           console.error("Error deleting category:", error);
@@ -155,7 +160,7 @@ const Categories = ({ setActiveContent }) => {
   };
 
   // Sort Products
-  const handleSortProducts = (id) => {
+  const handleSortProducts = () => {
     setSortedCategories([...categories]);
     setIsSortModalVisible(true);
   };
@@ -185,13 +190,12 @@ const Categories = ({ setActiveContent }) => {
   // Save sorted categories
   const saveSortedCategories = async () => {
     try {
-      // Prepare the order data
       const orderData = sortedCategories.map((cat, index) => ({
-        id: cat.id,
+        id: cat._id,
         order: index + 1,
       }));
 
-      await category.post("/", orderData);
+      await category.post("/sort", orderData);
       setCategories(sortedCategories);
       message.success("Categories order saved successfully!");
       setIsSortModalVisible(false);
@@ -207,15 +211,51 @@ const Categories = ({ setActiveContent }) => {
     setIsModalVisible(true);
   };
 
+  // Handle Cloudinary upload success
+  const handleUploadSuccess = (fieldName, data, formFieldName) => {
+    if (!data?.secure_url) {
+      message.error("Image upload failed!");
+      return;
+    }
+
+    const newFileList = [
+      {
+        uid: `-${Math.random()}`,
+        name: data.original_filename || "image.png",
+        status: "done",
+        url: data.secure_url,
+      },
+    ];
+
+    // Handle nested fields differently
+    if (Array.isArray(formFieldName)) {
+      // For nested details images
+      const currentDetails = form.getFieldValue("details") || [];
+      const updatedDetails = [...currentDetails];
+      const detailIndex = formFieldName[1]; // Get the index from the path
+
+      if (!updatedDetails[detailIndex]) {
+        updatedDetails[detailIndex] = {};
+      }
+
+      updatedDetails[detailIndex].image = newFileList;
+      form.setFieldsValue({ details: updatedDetails });
+    } else {
+      // For regular fields
+      form.setFieldsValue({ [formFieldName]: newFileList });
+    }
+  };
+
   // Handle form submission for add
   const handleSubmit = async (values) => {
-    console.log("Form Values:", values);
+    console.log("imaged detail", values.details);
     try {
-      // Prepare the data in the required format
       const categoryData = {
         title: values.shortTitle,
-        image: "https://via.placeholder.com/150",
-        pageImage: "https://via.placeholder.com/300",
+        image:
+          values.categoryImage?.[0]?.url || "https://via.placeholder.com/150",
+        pageImage:
+          values.pageImage?.[0]?.url || "https://via.placeholder.com/300",
         description: values.description,
         detailTitle: values.detailTitle,
         detailSubtitle: values.detailSubtitle,
@@ -227,20 +267,15 @@ const Categories = ({ setActiveContent }) => {
         details:
           values.details?.map((detail) => ({
             detailDescription: detail.detailDescription,
-            image: "https://via.placeholder.com/100",
+            image: detail.image?.[0]?.url || "https://via.placeholder.com/100",
           })) || [],
       };
-      console.log("categoryData", categoryData);
 
-      // Make the POST request
       const response = await category.post("/", categoryData);
-      console.log(response, "dataaaaa post wala");
-
-      // If successful, add the new category to your state
       const newCategory = {
-        id: response.data.id, // assuming the API returns the new ID
+        id: categories.length + 1,
+        _id: response.data._id,
         shortTitle: response.data.title,
-        descriptionTitle: values.descriptionTitle,
         description: response.data.description,
         categoryImage: response.data.image,
         pageImage: response.data.pageImage,
@@ -263,10 +298,8 @@ const Categories = ({ setActiveContent }) => {
     try {
       const categoryData = {
         title: values.shortTitle,
-        image:
-          values.categoryImage?.[0]?.thumbUrl || selectedCategory.categoryImage,
-        pageImage:
-          values.pageImage?.[0]?.thumbUrl || selectedCategory.pageImage,
+        image: values.categoryImage?.[0]?.url || selectedCategory.categoryImage,
+        pageImage: values.pageImage?.[0]?.url || selectedCategory.pageImage,
         description: values.description,
         detailTitle: values.detailTitle,
         detailSubtitle: values.detailSubtitle,
@@ -276,18 +309,20 @@ const Categories = ({ setActiveContent }) => {
           : values.seoKeywords,
         seoDescription: values.seoDescription,
         details:
-          values.details?.map((detail) => ({
+          values.details?.map((detail, index) => ({
             detailDescription: detail.detailDescription,
-            image: "https://via.placeholder.com/100",
+            image:
+              detail.image?.[0]?.url ||
+              selectedCategory.details?.[index]?.image ||
+              "https://via.placeholder.com/100",
           })) || [],
       };
-      // Make the PUT request
+
       await category.patch(`/${selectedCategory._id}`, categoryData);
 
-      // Update the category in your state
       const updatedCategory = {
         ...selectedCategory,
-        ...values,
+        ...categoryData,
         categoryImage: categoryData.image,
         pageImage: categoryData.pageImage,
         seoKeywords: categoryData.seoKeyword,
@@ -295,7 +330,7 @@ const Categories = ({ setActiveContent }) => {
       };
 
       const updatedCategories = categories.map((category) =>
-        category.id === selectedCategory.id ? updatedCategory : category
+        category._id === selectedCategory._id ? updatedCategory : category
       );
 
       setCategories(updatedCategories);
@@ -306,27 +341,6 @@ const Categories = ({ setActiveContent }) => {
       message.error("Failed to update category. Please try again.");
     }
   };
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await category.get("/");
-        console.log(response, "get wala data");
-        const formattedData = response.data.map((item, index) => ({
-          id: index + 1, // Optional: Use item._id if you want
-          shortTitle: item.title, // If there's a `shortTitle`, use that
-          description: item.description,
-          categoryImage: item.image, // Must match field expected in columns
-          ...item, // Keep original props if needed
-        }));
-        setCategories(formattedData);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-        message.error("Failed to load categories. Please try again later.");
-      }
-    };
-
-    fetchCategories();
-  }, []);
 
   // Table columns configuration
   const columns = [
@@ -364,6 +378,12 @@ const Categories = ({ setActiveContent }) => {
         <Space size="middle">
           <Button
             type="text"
+            icon={<EyeOutlined />}
+            onClick={() => handleView(record._id)}
+            title="View"
+          />
+          <Button
+            type="text"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record._id)}
             title="Edit"
@@ -385,14 +405,12 @@ const Categories = ({ setActiveContent }) => {
             type="text"
             icon={<FolderAddOutlined />}
             onClick={() => {
-              setSelectedCategoryId(record._id); // For local state
-              localStorage.setItem("selectedCategoryId", record._id); // ✅ Save to localStorage
+              setSelectedCategoryId(record._id);
+              localStorage.setItem("selectedCategoryId", record._id);
               setActiveContent("Subcategory");
             }}
             title="Add Subcategory"
           />
-
-          {/* <Subcategory selectedCategoryId={selectedCategoryId} /> */}
         </Space>
       ),
       width: 250,
@@ -435,7 +453,7 @@ const Categories = ({ setActiveContent }) => {
       {/* Add Category Modal */}
       <Modal
         title="Add New Category"
-        visible={isModalVisible}
+        open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
         footer={null}
         width={800}
@@ -487,16 +505,14 @@ const Categories = ({ setActiveContent }) => {
                   Array.isArray(e) ? e : e?.fileList || []
                 }
               >
-                <Upload
+                <CloudinaryUploader
+                  uploadPreset={uploadPreset}
+                  cloudName={cloudName}
                   listType="picture-card"
-                  maxCount={1}
-                  beforeUpload={() => false}
-                >
-                  <div>
-                    <PlusOutlined />
-                    <div style={{ marginTop: 8 }}>Upload</div>
-                  </div>
-                </Upload>
+                  onUploadSuccess={(data) =>
+                    handleUploadSuccess("categoryImage", data, "categoryImage")
+                  }
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -508,19 +524,18 @@ const Categories = ({ setActiveContent }) => {
                   Array.isArray(e) ? e : e?.fileList || []
                 }
               >
-                <Upload
+                <CloudinaryUploader
+                  uploadPreset={uploadPreset}
+                  cloudName={cloudName}
                   listType="picture-card"
-                  maxCount={1}
-                  beforeUpload={() => false}
-                >
-                  <div>
-                    <PlusOutlined />
-                    <div style={{ marginTop: 8 }}>Upload</div>
-                  </div>
-                </Upload>
+                  onUploadSuccess={(data) =>
+                    handleUploadSuccess("pageImage", data, "pageImage")
+                  }
+                />
               </Form.Item>
             </Col>
           </Row>
+
           <Form.Item
             label="SEO Title"
             name="seoTitle"
@@ -528,6 +543,7 @@ const Categories = ({ setActiveContent }) => {
           >
             <Input placeholder="Enter SEO title" />
           </Form.Item>
+
           <Form.Item
             label="SEO Description"
             name="seoDescription"
@@ -611,34 +627,28 @@ const Categories = ({ setActiveContent }) => {
                           />
                         </Form.Item>
                       </Col>
-
                       <Col span={24}>
                         <Form.Item
                           {...restField}
                           name={[name, "image"]}
                           label="Detail Image"
                           valuePropName="fileList"
-                          getValueFromEvent={(e) => {
-                            if (Array.isArray(e)) return e;
-                            return e?.fileList || [];
-                          }}
-                          rules={[
-                            {
-                              required: true,
-                              message: "Please upload an image",
-                            },
-                          ]}
+                          getValueFromEvent={(e) =>
+                            Array.isArray(e) ? e : e?.fileList || []
+                          }
                         >
-                          <Upload
+                          <CloudinaryUploader
+                            uploadPreset={uploadPreset}
+                            cloudName={cloudName}
                             listType="picture-card"
-                            maxCount={1}
-                            beforeUpload={() => false}
-                          >
-                            <div>
-                              <PlusOutlined />
-                              <div style={{ marginTop: 8 }}>Upload</div>
-                            </div>
-                          </Upload>
+                            onUploadSuccess={(data) =>
+                              handleUploadSuccess(
+                                `details[${name}].image`,
+                                data,
+                                ["details", name] // Pass as array to indicate nested field
+                              )
+                            }
+                          />
                         </Form.Item>
                       </Col>
                     </Row>
@@ -650,6 +660,7 @@ const Categories = ({ setActiveContent }) => {
                     onClick={() => add()}
                     block
                     icon={<PlusOutlined />}
+                    disabled={fields.length >= 5}
                   >
                     Add New Detail
                   </Button>
@@ -666,77 +677,10 @@ const Categories = ({ setActiveContent }) => {
         </Form>
       </Modal>
 
-      {/* View Category Modal */}
-      <Modal
-        title="Category Details"
-        visible={isViewModalVisible}
-        onCancel={() => setIsViewModalVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setIsViewModalVisible(false)}>
-            Close
-          </Button>,
-        ]}
-        width={700}
-      >
-        {selectedCategory && (
-          <div className="category-view">
-            <Row gutter={16}>
-              <Col span={8}>
-                <div className="category-image-container">
-                  <Image
-                    src={selectedCategory.categoryImage}
-                    alt={selectedCategory.shortTitle}
-                    width="100%"
-                    style={{ borderRadius: 8 }}
-                  />
-                  <p className="image-caption">Category Image</p>
-                </div>
-              </Col>
-              <Col span={16}>
-                <div className="category-details">
-                  <h2>{selectedCategory.shortTitle}</h2>
-                  <p className="description-title">
-                    {selectedCategory.descriptionTitle}
-                  </p>
-                  <p className="description">{selectedCategory.description}</p>
-
-                  <Divider orientation="left">SEO Information</Divider>
-                  <p>
-                    <strong>SEO Description:</strong>{" "}
-                    {selectedCategory.seoDescription}
-                  </p>
-                  <p>
-                    <strong>SEO Keywords:</strong>
-                    {selectedCategory.seoKeywords?.split(",").map((keyword) => (
-                      <Tag key={keyword.trim()} style={{ marginLeft: 8 }}>
-                        {keyword.trim()}
-                      </Tag>
-                    ))}
-                  </p>
-                </div>
-              </Col>
-            </Row>
-            <Row style={{ marginTop: 24 }}>
-              <Col span={24}>
-                <div className="page-image-container">
-                  <Image
-                    src={selectedCategory.pageImage}
-                    alt={selectedCategory.shortTitle}
-                    width="100%"
-                    style={{ borderRadius: 8 }}
-                  />
-                  <p className="image-caption">Page Image</p>
-                </div>
-              </Col>
-            </Row>
-          </div>
-        )}
-      </Modal>
-
       {/* Edit Category Modal */}
       <Modal
         title={`Edit Category: ${selectedCategory?.shortTitle}`}
-        visible={isEditModalVisible}
+        open={isEditModalVisible}
         onCancel={() => setIsEditModalVisible(false)}
         footer={null}
         width={800}
@@ -789,19 +733,18 @@ const Categories = ({ setActiveContent }) => {
                     Array.isArray(e) ? e : e?.fileList || []
                   }
                 >
-                  <Upload
+                  <CloudinaryUploader
+                    uploadPreset={uploadPreset}
+                    cloudName={cloudName}
                     listType="picture-card"
-                    maxCount={1}
-                    beforeUpload={() => false}
-                  >
-                    {(form.getFieldValue("categoryImage") || []).length >=
-                    1 ? null : (
-                      <div>
-                        <PlusOutlined />
-                        <div style={{ marginTop: 8 }}>Upload</div>
-                      </div>
-                    )}
-                  </Upload>
+                    onUploadSuccess={(data) =>
+                      handleUploadSuccess(
+                        "categoryImage",
+                        data,
+                        "categoryImage"
+                      )
+                    }
+                  />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -813,19 +756,14 @@ const Categories = ({ setActiveContent }) => {
                     Array.isArray(e) ? e : e?.fileList || []
                   }
                 >
-                  <Upload
+                  <CloudinaryUploader
+                    uploadPreset={uploadPreset}
+                    cloudName={cloudName}
                     listType="picture-card"
-                    maxCount={1}
-                    beforeUpload={() => false}
-                  >
-                    {(form.getFieldValue("pageImage") || []).length >=
-                    1 ? null : (
-                      <div>
-                        <PlusOutlined />
-                        <div style={{ marginTop: 8 }}>Upload</div>
-                      </div>
-                    )}
-                  </Upload>
+                    onUploadSuccess={(data) =>
+                      handleUploadSuccess("pageImage", data, "pageImage")
+                    }
+                  />
                 </Form.Item>
               </Col>
             </Row>
@@ -835,7 +773,7 @@ const Categories = ({ setActiveContent }) => {
               name="seoTitle"
               rules={[{ required: true, message: "Please enter SEO title" }]}
             >
-              <Input placeholder="Enter SEO title" />
+              <Input placeholder="SEO title" />
             </Form.Item>
 
             <Form.Item
@@ -845,18 +783,42 @@ const Categories = ({ setActiveContent }) => {
                 { required: true, message: "Please enter SEO description" },
               ]}
             >
-              <Input.TextArea rows={3} placeholder="Enter SEO description" />
+              <Input.TextArea rows={3} />
             </Form.Item>
 
             <Form.Item
-              label="SEO Keywords"
+              label="seoKeywords"
               name="seoKeywords"
-              rules={[{ required: true, message: "Please enter SEO keywords" }]}
+              rules={[{ required: true, message: "Please enter keywords" }]}
             >
               <Input placeholder="e.g. electronics, gadgets, smart devices" />
             </Form.Item>
 
-            {/* Form List for Details */}
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Detail Title"
+                  name="detailTitle"
+                  rules={[
+                    { required: true, message: "Please enter detail title" },
+                  ]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Detail Subtitle"
+                  name="detailSubtitle"
+                  rules={[
+                    { required: true, message: "Please enter detail subtitle" },
+                  ]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+            </Row>
+
             <Form.List name="details">
               {(fields, { add, remove }) => (
                 <>
@@ -897,43 +859,40 @@ const Categories = ({ setActiveContent }) => {
                             />
                           </Form.Item>
                         </Col>
-
                         <Col span={24}>
                           <Form.Item
                             {...restField}
                             name={[name, "image"]}
-                            label="Detail Image"
+                            label="Image"
                             valuePropName="fileList"
                             getValueFromEvent={(e) =>
                               Array.isArray(e) ? e : e?.fileList || []
                             }
-                            rules={[
-                              {
-                                required: true,
-                                message: "Please upload an image",
-                              },
-                            ]}
                           >
-                            <Upload
+                            <CloudinaryUploader
+                              cloudName={cloudName}
+                              uploadPreset={uploadPreset}
                               listType="picture-card"
-                              maxCount={1}
-                              beforeUpload={() => false}
-                            >
-                              <div>
-                                <PlusOutlined />
-                                <div style={{ marginTop: 8 }}>Upload</div>
-                              </div>
-                            </Upload>
+                              onUploadSuccess={(fileInfo) => {
+                                console.log("Uploaded in list:", fileInfo);
+                              }}
+                            />
                           </Form.Item>
                         </Col>
                       </Row>
                     </Card>
                   ))}
-                  {/* <Form.Item>
-              <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                Add New Detail
-              </Button>
-            </Form.Item> */}
+                  <Form.Item>
+                    <Button
+                      type="dashed"
+                      onClick={() => add()}
+                      block
+                      icon={<PlusOutlined />}
+                      disabled={fields.length >= 5}
+                    >
+                      Add New Detail
+                    </Button>
+                  </Form.Item>
                 </>
               )}
             </Form.List>
@@ -947,10 +906,99 @@ const Categories = ({ setActiveContent }) => {
         )}
       </Modal>
 
+      {/* View Category Modal */}
+      <Modal
+        title={`View Category: ${selectedCategory?.shortTitle}`}
+        open={isViewModalVisible}
+        onCancel={() => setIsViewModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setIsViewModalVisible(false)}>
+            Close
+          </Button>,
+        ]}
+        width={800}
+      >
+        {selectedCategory && (
+          <div>
+            <Row gutter={16}>
+              <Col span={12}>
+                <h4>Category Title</h4>
+                <p>{selectedCategory.shortTitle}</p>
+              </Col>
+              <Col span={12}>
+                <h4>Description Title</h4>
+                <p>{selectedCategory.descriptionTitle}</p>
+              </Col>
+            </Row>
+
+            <h4>Description</h4>
+            <p>{selectedCategory.description}</p>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <h4>Category Image</h4>
+                <Image
+                  src={selectedCategory.categoryImage}
+                  width={150}
+                  style={{ borderRadius: 4 }}
+                />
+              </Col>
+              <Col span={12}>
+                <h4>Page Image</h4>
+                <Image
+                  src={selectedCategory.pageImage}
+                  width={150}
+                  style={{ borderRadius: 4 }}
+                />
+              </Col>
+            </Row>
+
+            <h4>SEO Title</h4>
+            <p>{selectedCategory.seoTitle}</p>
+
+            <h4>SEO Description</h4>
+            <p>{selectedCategory.seoDescription}</p>
+
+            <h4>SEO Keywords</h4>
+            <p>{selectedCategory.seoKeywords}</p>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <h4>Detail Title</h4>
+                <p>{selectedCategory.detailTitle}</p>
+              </Col>
+              <Col span={12}>
+                <h4>Detail Subtitle</h4>
+                <p>{selectedCategory.detailSubtitle}</p>
+              </Col>
+            </Row>
+
+            <Divider orientation="left">Details</Divider>
+            {selectedCategory.details?.map((detail, index) => (
+              <Card
+                key={index}
+                type="inner"
+                title={`Detail ${index + 1}`}
+                style={{ marginBottom: 24 }}
+              >
+                <h4>Detail Description</h4>
+                <p>{detail.detailDescription}</p>
+                <h4>Detail Image</h4>
+                <Image
+                  src={detail.image}
+                  width={100}
+                  style={{ borderRadius: 4 }}
+                />
+              </Card>
+            ))}
+          </div>
+        )}
+      </Modal>
+
       {/* Sort Categories Modal */}
       <Modal
         title="Sort Categories"
-        visible={isSortModalVisible}
+        open={isSortModalVisible}
         onCancel={() => setIsSortModalVisible(false)}
         footer={[
           <Button key="cancel" onClick={() => setIsSortModalVisible(false)}>
