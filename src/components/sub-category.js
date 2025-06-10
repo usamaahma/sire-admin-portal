@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { message,Modal } from "antd";
-import {
-  FiEdit2,
-  FiTrash2,
-  FiPlus,
-  FiUpload,
-  FiX,
-  FiSave,
-} from "react-icons/fi";
+import { message, Modal } from "antd";
+import { FiEdit2, FiTrash2, FiPlus, FiSave } from "react-icons/fi";
+import CloudinaryUploader from "./cloudinary/CloudinaryUploader";
 import { subcategory } from "../utils/axios";
 import "./sub-category.css";
 
@@ -23,8 +17,8 @@ function Subcategory() {
   // State for form data
   const [formData, setFormData] = useState({
     title: "",
-    image: "",
-    pageImage: "",
+    image: [],
+    pageImage: [],
     description: "",
     detailTitle: "",
     detailSubtitle: "",
@@ -33,6 +27,10 @@ function Subcategory() {
     seoDescription: "",
     details: [{ detailDescription: "", images: [] }],
   });
+
+  // Cloudinary configuration
+  const cloudName = "dxhpud7sx"; // Same as Categories
+  const uploadPreset = "sireprinting"; // Same as Categories
 
   // Quill modules and formats
   const modules = {
@@ -71,8 +69,8 @@ function Subcategory() {
   const resetForm = () => {
     setFormData({
       title: "",
-      image: "",
-      pageImage: "",
+      image: [],
+      pageImage: [],
       description: "",
       detailTitle: "",
       detailSubtitle: "",
@@ -116,79 +114,88 @@ function Subcategory() {
     setFormData((prev) => ({ ...prev, details: updatedDetails }));
   };
 
-  // Handle image upload
-  const handleImageUpload = (e, fieldName) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData((prev) => ({ ...prev, [fieldName]: reader.result }));
-      };
-      reader.readAsDataURL(file);
+  // Handle Cloudinary upload success
+  const handleImageUpload = (data, fieldName) => {
+    if (!data?.secure_url) {
+      message.error("Image upload failed!");
+      return;
     }
+    const newFileList = [
+      {
+        uid: `-${Math.random()}`,
+        name: data.original_filename || "image.png",
+        status: "done",
+        url: data.secure_url,
+      },
+    ];
+    setFormData((prev) => ({ ...prev, [fieldName]: newFileList }));
   };
 
-  // Handle multiple image upload for details
-  const handleDetailImagesUpload = (index, e) => {
-    const files = Array.from(e.target.files);
-    if (files.length > 0) {
-      const readers = [];
-      const images = [];
-
-      files.forEach((file) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          images.push(reader.result);
-          if (images.length === files.length) {
-            const updatedDetails = [...formData.details];
-            updatedDetails[index].images = [
-              ...updatedDetails[index].images,
-              ...images,
-            ];
-            setFormData((prev) => ({ ...prev, details: updatedDetails }));
-          }
-        };
-        reader.readAsDataURL(file);
-        readers.push(reader);
-      });
+  // Handle Cloudinary upload for details
+  const handleDetailImagesUpload = (data, detailIndex) => {
+    if (!data?.secure_url) {
+      message.error("Image upload failed!");
+      return;
     }
+    const newFile = {
+      uid: `detail-${detailIndex}-${Math.random()}`,
+      name: data.original_filename || "detail-image.png",
+      status: "done",
+      url: data.secure_url,
+    };
+    const updatedDetails = [...formData.details];
+    // Allow only one image per detail as per backend structure
+    updatedDetails[detailIndex].images = [newFile];
+    setFormData((prev) => ({ ...prev, details: updatedDetails }));
   };
 
   // Remove detail image
-  const removeDetailImage = (detailIndex, imageIndex) => {
+  const removeDetailImage = (detailIndex) => {
     const updatedDetails = [...formData.details];
-    updatedDetails[detailIndex].images = updatedDetails[
-      detailIndex
-    ].images.filter((_, i) => i !== imageIndex);
+    updatedDetails[detailIndex].images = [];
     setFormData((prev) => ({ ...prev, details: updatedDetails }));
   };
+
+  // Strip HTML for backend
   const stripHtml = (html) => {
     const tmp = document.createElement("DIV");
     tmp.innerHTML = html;
     return tmp.textContent || tmp.innerText || "";
   };
+
   // Submit form
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const payload = {
-      ...formData,
-      details: formData.details.map((d) => ({
-        detailDescription: stripHtml(d.detailDescription),
-        image: d.images[0] || "", // assuming single image for backend structure
-      })),
-      categoryId: categoryId,
-    };
-
+  const handleSubmit = async () => {
     try {
+      const payload = {
+        ...formData,
+        image: formData.image[0]?.url || "",
+        pageImage: formData.pageImage[0]?.url || "",
+        details: formData.details.map((d) => ({
+          detailDescription: stripHtml(d.detailDescription) || "",
+          image: d.images[0]?.url || "",
+        })),
+        categoryId: categoryId,
+      };
+
+      if (!payload.title || !payload.categoryId) {
+        message.error("Title and Category ID are required!");
+        return;
+      }
+
       const res = await subcategory.post("/", payload, {
         headers: {
           "Content-Type": "application/json",
         },
       });
 
+      const newSubcategory = {
+        ...res.data,
+        image: payload.image,
+        pageImage: payload.pageImage,
+        details: payload.details,
+      };
+      setSubcategories([...subcategories, newSubcategory]);
       message.success("Subcategory created successfully!");
-      setSubcategories([...subcategories, res.data]);
       resetForm();
       setShowForm(false);
     } catch (error) {
@@ -201,38 +208,73 @@ function Subcategory() {
   const handleEdit = (index) => {
     const subcatToEdit = subcategories[index];
     setFormData({
-      _id: subcatToEdit._id,
-      title: subcatToEdit.title,
-      image: subcatToEdit.image,
-      pageImage: subcatToEdit.pageImage,
-      description: subcatToEdit.description,
-      detailTitle: subcatToEdit.detailTitle,
-      detailSubtitle: subcatToEdit.detailSubtitle,
-      seoTitle: subcatToEdit.seoTitle,
-      seoKeyword: subcatToEdit.seoKeyword,
-      seoDescription: subcatToEdit.seoDescription,
-      details: subcatToEdit.details?.map((detail) => ({
-        detailDescription: detail.detailDescription,
-        images: detail.image ? [detail.image] : [],
-      })) || [{ detailDescription: "", images: [] }],
+      _id: subcatToEdit._id || "",
+      title: subcatToEdit.title || "",
+      image: subcatToEdit.image
+        ? [
+            {
+              uid: "-1",
+              name: "subcategory-image.png",
+              status: "done",
+              url: subcatToEdit.image,
+              thumbUrl: subcatToEdit.image,
+            },
+          ]
+        : [],
+      pageImage: subcatToEdit.pageImage
+        ? [
+            {
+              uid: "-2",
+              name: "page-image.png",
+              status: "done",
+              url: subcatToEdit.pageImage,
+              thumbUrl: subcatToEdit.pageImage,
+            },
+          ]
+        : [],
+      description: subcatToEdit.description || "",
+      detailTitle: subcatToEdit.detailTitle || "",
+      detailSubtitle: subcatToEdit.detailSubtitle || "",
+      seoTitle: subcatToEdit.seoTitle || "",
+      seoKeyword: subcatToEdit.seoKeyword || "",
+      seoDescription: subcatToEdit.seoDescription || "",
+      details: (subcatToEdit.details || []).map((detail, detailIndex) => ({
+        detailDescription: detail.detailDescription || "",
+        images: detail.image
+          ? [
+              {
+                uid: `detail-${detailIndex}`,
+                name: `detail-image-${detailIndex}.png`,
+                status: "done",
+                url: detail.image,
+                thumbUrl: detail.image,
+              },
+            ]
+          : [],
+      })),
     });
     setEditingIndex(index);
     setShowForm(true);
   };
 
   // Update subcategory
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-
+  const handleEditSubmit = async () => {
     try {
       const updatedSubcategory = {
         ...formData,
+        image: formData.image[0]?.url || "",
+        pageImage: formData.pageImage[0]?.url || "",
         details: formData.details.map((detail) => ({
-          detailDescription: detail.detailDescription,
-          image: detail.images[0] || "", // Replace with uploaded URLs if needed
+          detailDescription: stripHtml(detail.detailDescription) || "",
+          image: detail.images[0]?.url || "",
         })),
         categoryId: categoryId,
       };
+
+      if (!updatedSubcategory.title || !updatedSubcategory.categoryId) {
+        message.error("Title and Category ID are required!");
+        return;
+      }
 
       await subcategory.patch(`/${formData._id}`, updatedSubcategory);
 
@@ -251,29 +293,26 @@ function Subcategory() {
   };
 
   // Delete subcategory
-const handleDelete = (index) => {
-  const subcatId = subcategories[index]._id;
+  const handleDelete = (index) => {
+    const subcatId = subcategories[index]._id;
 
-  Modal.confirm({
-    title: "Are you sure you want to delete this subcategory?",
-    onOk: async () => {
-      try {
-        // ✅ Send DELETE request
-        await subcategory.delete(`/${subcatId}`);
-
-        // ✅ Update local state
-        const updatedSubcategories = subcategories.filter((_, i) => i !== index);
-        setSubcategories(updatedSubcategories);
-
-        message.success("Subcategory deleted successfully!");
-      } catch (error) {
-        console.error("Error deleting subcategory:", error);
-        message.error("Failed to delete subcategory. Please try again.");
-      }
-    },
-  });
-};
-
+    Modal.confirm({
+      title: "Are you sure you want to delete this subcategory?",
+      onOk: async () => {
+        try {
+          await subcategory.delete(`/${subcatId}`);
+          const updatedSubcategories = subcategories.filter(
+            (_, i) => i !== index
+          );
+          setSubcategories(updatedSubcategories);
+          message.success("Subcategory deleted successfully!");
+        } catch (error) {
+          console.error("Error deleting subcategory:", error);
+          message.error("Failed to delete subcategory. Please try again.");
+        }
+      },
+    });
+  };
 
   useEffect(() => {
     const fetchSubcategories = async () => {
@@ -306,7 +345,10 @@ const handleDelete = (index) => {
             {editingIndex !== null ? "Edit Subcategory" : "Add New Subcategory"}
           </h2>
           <form
-            onSubmit={editingIndex !== null ? handleEditSubmit : handleSubmit}
+            onSubmit={(e) => {
+              e.preventDefault();
+              editingIndex !== null ? handleEditSubmit() : handleSubmit();
+            }}
           >
             {/* Main Fields */}
             <div className="form-group">
@@ -324,70 +366,32 @@ const handleDelete = (index) => {
             <div className="form-row">
               <div className="form-group">
                 <label>Main Image</label>
-                <div className="image-upload-container">
-                  <label className="image-upload-btn">
-                    <FiUpload className="upload-icon" />
-                    <span>Upload Image</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageUpload(e, "image")}
-                      hidden
-                    />
-                  </label>
-                  {formData.image && (
-                    <div className="image-preview-container">
-                      <img
-                        src={formData.image}
-                        alt="Preview"
-                        className="image-preview"
-                      />
-                      <button
-                        type="button"
-                        className="remove-image-btn"
-                        onClick={() =>
-                          setFormData((prev) => ({ ...prev, image: "" }))
-                        }
-                      >
-                        <FiX />
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <CloudinaryUploader
+                  cloudName={cloudName}
+                  uploadPreset={uploadPreset}
+                  listType="picture-card"
+                  onUploadSuccess={(data) => handleImageUpload(data, "image")}
+                  fileList={formData.image}
+                  onChange={(fileList) =>
+                    setFormData((prev) => ({ ...prev, image: fileList }))
+                  }
+                />
               </div>
 
               <div className="form-group">
                 <label>Page Image</label>
-                <div className="image-upload-container">
-                  <label className="image-upload-btn">
-                    <FiUpload className="upload-icon" />
-                    <span>Upload Image</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageUpload(e, "pageImage")}
-                      hidden
-                    />
-                  </label>
-                  {formData.pageImage && (
-                    <div className="image-preview-container">
-                      <img
-                        src={formData.pageImage}
-                        alt="Preview"
-                        className="image-preview"
-                      />
-                      <button
-                        type="button"
-                        className="remove-image-btn"
-                        onClick={() =>
-                          setFormData((prev) => ({ ...prev, pageImage: "" }))
-                        }
-                      >
-                        <FiX />
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <CloudinaryUploader
+                  cloudName={cloudName}
+                  uploadPreset={uploadPreset}
+                  listType="picture-card"
+                  onUploadSuccess={(data) =>
+                    handleImageUpload(data, "pageImage")
+                  }
+                  fileList={formData.pageImage}
+                  onChange={(fileList) =>
+                    setFormData((prev) => ({ ...prev, pageImage: fileList }))
+                  }
+                />
               </div>
             </div>
 
@@ -426,7 +430,6 @@ const handleDelete = (index) => {
               </div>
             </div>
 
-            {/* SEO Fields */}
             <div className="form-group">
               <label>SEO Title</label>
               <input
@@ -460,7 +463,6 @@ const handleDelete = (index) => {
               />
             </div>
 
-            {/* Details Section */}
             <div className="details-section">
               <h3>Content Sections</h3>
               {formData.details.map((detail, index) => (
@@ -480,41 +482,24 @@ const handleDelete = (index) => {
                   </div>
 
                   <div className="form-group">
-                    <label>Section Images (Multiple)</label>
-                    <div className="image-upload-container">
-                      <label className="image-upload-btn">
-                        <FiUpload className="upload-icon" />
-                        <span>Upload Images</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={(e) => handleDetailImagesUpload(index, e)}
-                          hidden
-                        />
-                      </label>
-                      <div className="image-preview-grid">
-                        {detail.images.map((image, imgIndex) => (
-                          <div
-                            key={imgIndex}
-                            className="image-preview-container"
-                          >
-                            <img
-                              src={image}
-                              alt={`Preview ${imgIndex + 1}`}
-                              className="image-preview"
-                            />
-                            <button
-                              type="button"
-                              className="remove-image-btn"
-                              onClick={() => removeDetailImage(index, imgIndex)}
-                            >
-                              <FiX />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <label>Section Image</label>
+                    <CloudinaryUploader
+                      cloudName={cloudName}
+                      uploadPreset={uploadPreset}
+                      listType="picture-card"
+                      onUploadSuccess={(data) =>
+                        handleDetailImagesUpload(data, index)
+                      }
+                      fileList={detail.images}
+                      onChange={(fileList) => {
+                        const updatedDetails = [...formData.details];
+                        updatedDetails[index].images = fileList;
+                        setFormData((prev) => ({
+                          ...prev,
+                          details: updatedDetails,
+                        }));
+                      }}
+                    />
                   </div>
 
                   {formData.details.length > 1 && (
@@ -548,7 +533,6 @@ const handleDelete = (index) => {
         </div>
       )}
 
-      {/* Subcategories Table */}
       {subcategories.length > 0 && (
         <div className="subcategories-table">
           <h2>Subcategories List</h2>
