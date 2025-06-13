@@ -19,6 +19,7 @@ import {
   LockOutlined,
   MenuOutlined,
   UserOutlined,
+  RocketOutlined, // Added for Instant Quote icon
 } from "@ant-design/icons";
 
 import Dashboard from "./dashboard";
@@ -39,10 +40,11 @@ import Subcategory from "./sub-category";
 import "./sider.css";
 import Contact from "./contactus";
 import Blogauthor from "./blogs/blogauthor";
+import Instantquote from "./instantquote/instantquote";
 
 const AdminPortal = () => {
   const [activeContent, setActiveContent] = useState("Dashboard");
-  const [activeTab, setActiveTab] = useState("Blog Categories"); // Changed default to Categories
+  const [activeTab, setActiveTab] = useState("Blog Categories");
   const [isBlogManagementOpen, setIsBlogManagementOpen] = useState(false);
   const [username, setUsername] = useState("User");
   const navigate = useNavigate();
@@ -66,6 +68,8 @@ const AdminPortal = () => {
         return <Navbarcategory />;
       case "Get a Quote":
         return <Quote />;
+      case "Instant Quote": // Added case for Instant Quote
+        return <Instantquote />;
       case "Portfolio":
         return <Portfolio />;
       case "Product Sorting":
@@ -78,7 +82,6 @@ const AdminPortal = () => {
         return (
           <div className="blog-content-container">
             <div className="blog-tabs">
-              {/* 1. Categories First */}
               <button
                 className={`tab-button ${
                   activeTab === "Blog Categories" ? "active-tab" : ""
@@ -87,8 +90,6 @@ const AdminPortal = () => {
               >
                 <FolderOutlined /> Categories
               </button>
-
-              {/* 2. Authors Second */}
               <button
                 className={`tab-button ${
                   activeTab === "Blog Authors" ? "active-tab" : ""
@@ -97,8 +98,6 @@ const AdminPortal = () => {
               >
                 <UserOutlined /> Authors
               </button>
-
-              {/* 3. Blogs Last */}
               <button
                 className={`tab-button ${
                   activeTab === "Blogs" ? "active-tab" : ""
@@ -149,6 +148,7 @@ const AdminPortal = () => {
     { name: "Navbar Categories", icon: <MenuOutlined /> },
     { name: "Categories", icon: <AppstoreOutlined /> },
     { name: "Get a Quote", icon: <FormOutlined /> },
+    { name: "Instant Quote", icon: <RocketOutlined /> }, // Added Instant Quote menu item
     { name: "Portfolio", icon: <PictureOutlined /> },
     { name: "Product Sorting", icon: <SortAscendingOutlined /> },
     { name: "Testimonial", icon: <MessageOutlined /> },

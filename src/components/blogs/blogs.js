@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   Button,
   Modal,
   Input,
-  Upload,
   message,
   Switch,
   Space,
@@ -21,7 +20,6 @@ import {
 } from "antd";
 import {
   PlusOutlined,
-  UploadOutlined,
   DeleteOutlined,
   EditOutlined,
   CloseOutlined,
@@ -30,9 +28,13 @@ import {
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { blogcategorys, blogauthors, blogss } from "../../utils/axios";
+import CloudinaryUploader from "../cloudinary/CloudinaryUploader";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+
+const cloudName = "dxhpud7sx";
+const uploadPreset = "sireprinting";
 
 const Blog = () => {
   const [blogs, setBlogs] = useState([]);
@@ -136,7 +138,6 @@ const Blog = () => {
     if (blog) {
       setEditingBlog(blog);
       setTitle(blog.title || "");
-      // Ensure these are properly set with valid IDs
       setBlogAuthor(blog.blogAuthor?._id || "");
       setBlogCategory(blog.blogCategory?._id || "");
       setHasCarousel(blog.hasCarousel || false);
@@ -172,42 +173,6 @@ const Blog = () => {
   const closeModal = () => {
     setModalVisible(false);
     resetForm();
-  };
-
-  // Image upload handlers
-  const beforeUploadMainImage = (file) => {
-    const isImg = file.type.startsWith("image/");
-    if (!isImg) {
-      message.error("Only image files allowed");
-      return false;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setMainImage(reader.result);
-    };
-    reader.readAsDataURL(file);
-    return false;
-  };
-
-  const beforeUploadDetailImages = (file, detailIndex) => {
-    const isImg = file.type.startsWith("image/");
-    if (!isImg) {
-      message.error("Only image files allowed");
-      return false;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setDetails((prev) => {
-        const newDetails = [...prev];
-        newDetails[detailIndex].images = [
-          ...(newDetails[detailIndex].images || []),
-          reader.result,
-        ];
-        return newDetails;
-      });
-    };
-    reader.readAsDataURL(file);
-    return false;
   };
 
   // Detail management
@@ -329,12 +294,11 @@ const Blog = () => {
         return;
       }
 
-      // Create a proper payload object
       const payload = {
         title,
-        blogAuthor, // Make sure this is a valid ObjectId string
-        blogCategory, // Make sure this is a valid ObjectId string
-        image: mainImage, // Don't hardcode "aa"
+        blogAuthor,
+        blogCategory,
+        image: mainImage,
         hasCarousel,
         details,
       };
@@ -352,7 +316,6 @@ const Blog = () => {
     } catch (error) {
       console.error("Error submitting blog:", error);
       if (error.response) {
-        // More detailed error handling
         if (error.response.data.errors) {
           const errors = error.response.data.errors;
           Object.keys(errors).forEach((key) => {
@@ -377,7 +340,6 @@ const Blog = () => {
     }
   };
 
-  // Columns for main blogs table
   const columns = [
     {
       title: "Title",
@@ -596,32 +558,26 @@ const Blog = () => {
                 label="Main Image"
                 required
                 tooltip="This will be the featured image for the blog"
+                rules={[{ required: true, message: "Please upload main image" }]}
               >
-                <Upload
-                  beforeUpload={beforeUploadMainImage}
-                  showUploadList={false}
-                  accept="image/*"
+                <CloudinaryUploader
+                  cloudName={cloudName}
+                  uploadPreset={uploadPreset}
+                  listType="picture-card"
                   maxCount={1}
+                  onUploadSuccess={(data) => {
+                    if (data?.secure_url) {
+                      setMainImage(data.secure_url);
+                    } else {
+                      message.error("Failed to upload main image");
+                    }
+                  }}
                 >
-                  <Button icon={<UploadOutlined />}>
-                    {mainImage ? "Change Image" : "Upload Image"}
-                  </Button>
-                </Upload>
-                {mainImage && (
-                  <div style={{ marginTop: 12 }}>
-                    <img
-                      src={mainImage}
-                      alt="main preview"
-                      style={{
-                        width: 150,
-                        height: 150,
-                        objectFit: "cover",
-                        borderRadius: 6,
-                        border: "1px solid #d9d9d9",
-                      }}
-                    />
+                  <div>
+                    <PlusOutlined />
+                    <div style={{ marginTop: 8 }}>Upload Main Image</div>
                   </div>
-                )}
+                </CloudinaryUploader>
               </Form.Item>
             </Col>
 
@@ -744,16 +700,31 @@ const Blog = () => {
               <Row gutter={24}>
                 <Col span={24}>
                   <Form.Item label="Images">
-                    <Upload
-                      multiple
-                      beforeUpload={(file) =>
-                        beforeUploadDetailImages(file, detailIndex)
-                      }
-                      showUploadList={false}
-                      accept="image/*"
+                    <CloudinaryUploader
+                      cloudName={cloudName}
+                      uploadPreset={uploadPreset}
+                      listType="picture-card"
+                      maxCount={10} // Adjust as needed
+                      onUploadSuccess={(data) => {
+                        if (data?.secure_url) {
+                          setDetails((prev) => {
+                            const newDetails = [...prev];
+                            newDetails[detailIndex].images = [
+                              ...(newDetails[detailIndex].images || []),
+                              data.secure_url,
+                            ];
+                            return newDetails;
+                          });
+                        } else {
+                          message.error("Failed to upload detail image");
+                        }
+                      }}
                     >
-                      <Button icon={<UploadOutlined />}>Upload Images</Button>
-                    </Upload>
+                      <div>
+                        <PlusOutlined />
+                        <div style={{ marginTop: 8 }}>Upload Image</div>
+                      </div>
+                    </CloudinaryUploader>
                     <div
                       style={{
                         marginTop: 12,
@@ -773,32 +744,6 @@ const Blog = () => {
                               objectFit: "cover",
                               borderRadius: 6,
                               border: "1px solid #d9d9d9",
-                            }}
-                          />
-                          <Button
-                            size="small"
-                            danger
-                            type="text"
-                            icon={<CloseOutlined />}
-                            onClick={() => {
-                              setDetails((prev) => {
-                                const newDetails = [...prev];
-                                newDetails[detailIndex].images.splice(
-                                  imgIndex,
-                                  1
-                                );
-                                return newDetails;
-                              });
-                            }}
-                            style={{
-                              position: "absolute",
-                              top: 4,
-                              right: 4,
-                              padding: 0,
-                              width: 24,
-                              height: 24,
-                              borderRadius: "50%",
-                              background: "rgba(255,255,255,0.8)",
                             }}
                           />
                         </div>

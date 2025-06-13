@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Input, Upload, message, Popconfirm } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import { Table, Button, Modal, Input, message, Popconfirm } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { blogauthors } from '../../utils/axios'; 
+import { blogauthors } from '../../utils/axios';
+import CloudinaryUploader from '../cloudinary/CloudinaryUploader'; // Adjust the path as needed
+
+const cloudName = "dxhpud7sx";
+const uploadPreset = "sireprinting";
 
 const Blogauthor = () => {
   const [blogAuthors, setBlogAuthors] = useState([]);
@@ -67,21 +71,6 @@ const Blogauthor = () => {
     setName('');
     setImageUrl('');
     setDescription('');
-  };
-
-  // Upload handler: convert to base64, no actual upload, for demo purpose
-  const beforeUpload = (file) => {
-    const isImage = file.type.startsWith('image/');
-    if (!isImage) {
-      message.error('You can only upload image files!');
-      return false;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImageUrl(reader.result);
-    };
-    reader.readAsDataURL(file);
-    return false; // Prevent upload to server, we're handling manually
   };
 
   // Submit add/update author
@@ -226,17 +215,28 @@ const Blogauthor = () => {
           maxLength={100}
         />
 
-        <Upload
-          beforeUpload={beforeUpload}
-          showUploadList={false}
-          accept="image/*"
-          style={{ marginBottom: 15 }}
-          disabled={modalLoading}
-        >
-          <Button icon={<UploadOutlined />} loading={modalLoading}>
-            {imageUrl ? 'Change Image' : 'Upload Image'}
-          </Button>
-        </Upload>
+        <div style={{ marginBottom: 15 }}>
+          <CloudinaryUploader
+            cloudName={cloudName}
+            uploadPreset={uploadPreset}
+            listType="picture-card"
+            maxCount={1}
+            onUploadSuccess={(data) => {
+              if (data?.secure_url) {
+                setImageUrl(data.secure_url);
+              } else {
+                message.error('Failed to upload image');
+              }
+            }}
+            disabled={modalLoading}
+          >
+            <div>
+              <PlusOutlined />
+              <div style={{ marginTop: 8 }}>{imageUrl ? 'Change Image' : 'Upload Image'}</div>
+            </div>
+          </CloudinaryUploader>
+        </div>
+
         {imageUrl && (
           <img
             src={imageUrl}

@@ -53,7 +53,9 @@ const navitems = axios.create({
 const portfolio = axios.create({
   baseURL: `${baseURL}/portfolio`,
 });
-
+const instantquot = axios.create({
+  baseURL: `${baseURL}/instantquote`,
+});
 // Generic request interceptor for all instances
 const requestInterceptor = (req) => {
   // Optionally add authorization headers or custom logic
@@ -86,6 +88,7 @@ blogauthors.interceptors.request.use(requestInterceptor, errorInterceptor);
 blogss.interceptors.request.use(requestInterceptor, errorInterceptor);
 navitems.interceptors.request.use(requestInterceptor, errorInterceptor);
 portfolio.interceptors.request.use(requestInterceptor, errorInterceptor);
+instantquot.interceptors.request.use(requestInterceptor, errorInterceptor);
 
 export {
   signup,
@@ -103,4 +106,5 @@ export {
   blogss,
   navitems,
   portfolio,
+  instantquot,
 };
