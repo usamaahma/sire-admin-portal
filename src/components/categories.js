@@ -50,6 +50,7 @@ const Categories = ({ setActiveContent }) => {
     const fetchCategories = async () => {
       try {
         const response = await category.get("/");
+        console.log("API Response:", response.data); // Debug API data
         const formattedData = response.data.map((item, index) => ({
           id: index + 1,
           _id: item._id,
@@ -57,8 +58,12 @@ const Categories = ({ setActiveContent }) => {
           description: item.description,
           categoryImage: item.image,
           pageImage: item.pageImage,
+          descriptionTitle: item.descriptionTitle,
+          seoTitle: item.seoTitle,
           seoDescription: item.seoDescription,
           seoKeywords: item.seoKeyword,
+          detailTitle: item.detailTitle,
+          detailSubtitle: item.detailSubtitle,
           details: item.details || [],
         }));
         setCategories(formattedData);
@@ -91,9 +96,14 @@ const Categories = ({ setActiveContent }) => {
     }
 
     const formValues = {
-      ...category,
-      shortTitle: category.shortTitle,
-      description: category.description,
+      shortTitle: category.shortTitle || "",
+      description: category.description || "",
+      descriptionTitle: category.descriptionTitle || "",
+      seoTitle: category.seoTitle || "",
+      seoDescription: category.seoDescription || "",
+      seoKeywords: category.seoKeywords?.split(",").map((k) => k.trim()) || [],
+      detailTitle: category.detailTitle || "",
+      detailSubtitle: category.detailSubtitle || "",
       categoryImage: category.categoryImage
         ? [
             {
@@ -116,13 +126,8 @@ const Categories = ({ setActiveContent }) => {
             },
           ]
         : [],
-      seoTitle: category.seoTitle,
-      seoDescription: category.seoDescription,
-      seoKeywords: category.seoKeywords?.split(",").map((k) => k.trim()) || [],
-      detailTitle: category.detailTitle,
-      detailSubtitle: category.detailSubtitle,
       details: (category.details || []).map((detail, index) => ({
-        detailDescription: detail.detailDescription,
+        detailDescription: detail.detailDescription || "",
         image: detail.image
           ? [
               {
@@ -137,9 +142,17 @@ const Categories = ({ setActiveContent }) => {
       })),
     };
 
+    console.log("Form Values for Edit:", formValues); // Debug
     form.setFieldsValue(formValues);
     setSelectedCategory(category);
     setIsEditModalVisible(true);
+  };
+
+  // Handle cancel for edit modal
+  const handleCancelEdit = () => {
+    form.resetFields();
+    setIsEditModalVisible(false);
+    setSelectedCategory(null);
   };
 
   // Delete Category
@@ -213,42 +226,50 @@ const Categories = ({ setActiveContent }) => {
 
   // Handle Cloudinary upload success
   const handleUploadSuccess = (fieldName, data, formFieldName) => {
-    if (!data?.secure_url) {
-      message.error("Image upload failed!");
-      return;
-    }
-
-    const newFileList = [
-      {
-        uid: `-${Math.random()}`,
-        name: data.original_filename || "image.png",
-        status: "done",
-        url: data.secure_url,
-      },
-    ];
-
-    // Handle nested fields differently
-    if (Array.isArray(formFieldName)) {
-      // For nested details images
-      const currentDetails = form.getFieldValue("details") || [];
-      const updatedDetails = [...currentDetails];
-      const detailIndex = formFieldName[1]; // Get the index from the path
-
-      if (!updatedDetails[detailIndex]) {
-        updatedDetails[detailIndex] = {};
+    if (Array.isArray(data)) {
+      // Handle image removal (data is the updated fileList)
+      if (Array.isArray(formFieldName)) {
+        const currentDetails = form.getFieldValue("details") || [];
+        const updatedDetails = [...currentDetails];
+        const detailIndex = formFieldName[1];
+        updatedDetails[detailIndex].image = data;
+        form.setFieldsValue({ details: updatedDetails });
+      } else {
+        form.setFieldsValue({ [formFieldName]: data });
       }
+    } else if (data?.url) {
+      // Handle image upload
+      const newFileList = [
+        {
+          uid: data.uid,
+          name: data.name,
+          status: data.status,
+          url: data.url,
+          thumbUrl: data.thumbUrl,
+        },
+      ];
 
-      updatedDetails[detailIndex].image = newFileList;
-      form.setFieldsValue({ details: updatedDetails });
+      if (Array.isArray(formFieldName)) {
+        const currentDetails = form.getFieldValue("details") || [];
+        const updatedDetails = [...currentDetails];
+        const detailIndex = formFieldName[1];
+
+        if (!updatedDetails[detailIndex]) {
+          updatedDetails[detailIndex] = {};
+        }
+
+        updatedDetails[detailIndex].image = newFileList;
+        form.setFieldsValue({ details: updatedDetails });
+      } else {
+        form.setFieldsValue({ [formFieldName]: newFileList });
+      }
     } else {
-      // For regular fields
-      form.setFieldsValue({ [formFieldName]: newFileList });
+      message.error("Image upload failed!");
     }
   };
 
   // Handle form submission for add
   const handleSubmit = async (values) => {
-    console.log("imaged detail", values.details);
     try {
       const categoryData = {
         title: values.shortTitle,
@@ -257,13 +278,14 @@ const Categories = ({ setActiveContent }) => {
         pageImage:
           values.pageImage?.[0]?.url || "https://via.placeholder.com/300",
         description: values.description,
-        detailTitle: values.detailTitle,
-        detailSubtitle: values.detailSubtitle,
+        descriptionTitle: values.descriptionTitle,
         seoTitle: values.seoTitle,
         seoKeyword: Array.isArray(values.seoKeywords)
           ? values.seoKeywords.join(", ")
           : values.seoKeywords,
         seoDescription: values.seoDescription,
+        detailTitle: values.detailTitle,
+        detailSubtitle: values.detailSubtitle,
         details:
           values.details?.map((detail) => ({
             detailDescription: detail.detailDescription,
@@ -279,8 +301,12 @@ const Categories = ({ setActiveContent }) => {
         description: response.data.description,
         categoryImage: response.data.image,
         pageImage: response.data.pageImage,
+        descriptionTitle: response.data.descriptionTitle,
+        seoTitle: response.data.seoTitle,
         seoDescription: response.data.seoDescription,
         seoKeywords: response.data.seoKeyword,
+        detailTitle: response.data.detailTitle,
+        detailSubtitle: response.data.detailSubtitle,
         details: response.data.details,
       };
 
@@ -301,13 +327,14 @@ const Categories = ({ setActiveContent }) => {
         image: values.categoryImage?.[0]?.url || selectedCategory.categoryImage,
         pageImage: values.pageImage?.[0]?.url || selectedCategory.pageImage,
         description: values.description,
-        detailTitle: values.detailTitle,
-        detailSubtitle: values.detailSubtitle,
+        descriptionTitle: values.descriptionTitle,
         seoTitle: values.seoTitle,
         seoKeyword: Array.isArray(values.seoKeywords)
           ? values.seoKeywords.join(", ")
           : values.seoKeywords,
         seoDescription: values.seoDescription,
+        detailTitle: values.detailTitle,
+        detailSubtitle: values.detailSubtitle,
         details:
           values.details?.map((detail, index) => ({
             detailDescription: detail.detailDescription,
@@ -325,7 +352,11 @@ const Categories = ({ setActiveContent }) => {
         ...categoryData,
         categoryImage: categoryData.image,
         pageImage: categoryData.pageImage,
+        descriptionTitle: categoryData.descriptionTitle,
+        seoTitle: categoryData.seoTitle,
         seoKeywords: categoryData.seoKeyword,
+        detailTitle: categoryData.detailTitle,
+        detailSubtitle: categoryData.detailSubtitle,
         details: categoryData.details,
       };
 
@@ -471,17 +502,6 @@ const Categories = ({ setActiveContent }) => {
                 <Input placeholder="e.g. Electronics" />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item
-                label="Description Title"
-                name="descriptionTitle"
-                rules={[
-                  { required: true, message: "Please enter description title" },
-                ]}
-              >
-                <Input placeholder="e.g. Electronics Collection" />
-              </Form.Item>
-            </Col>
           </Row>
 
           <Form.Item
@@ -509,6 +529,7 @@ const Categories = ({ setActiveContent }) => {
                   uploadPreset={uploadPreset}
                   cloudName={cloudName}
                   listType="picture-card"
+                  fileList={form.getFieldValue("categoryImage") || []}
                   onUploadSuccess={(data) =>
                     handleUploadSuccess("categoryImage", data, "categoryImage")
                   }
@@ -528,6 +549,7 @@ const Categories = ({ setActiveContent }) => {
                   uploadPreset={uploadPreset}
                   cloudName={cloudName}
                   listType="picture-card"
+                  fileList={form.getFieldValue("pageImage") || []}
                   onUploadSuccess={(data) =>
                     handleUploadSuccess("pageImage", data, "pageImage")
                   }
@@ -554,13 +576,13 @@ const Categories = ({ setActiveContent }) => {
             <Input.TextArea rows={3} placeholder="SEO meta description" />
           </Form.Item>
 
-          <Form.Item
+          {/* <Form.Item
             label="SEO Keywords"
             name="seoKeywords"
             rules={[{ required: true, message: "Please enter SEO keywords" }]}
           >
             <Input placeholder="e.g. electronics, gadgets, smart devices" />
-          </Form.Item>
+          </Form.Item> */}
 
           <Row gutter={16}>
             <Col span={12}>
@@ -641,11 +663,14 @@ const Categories = ({ setActiveContent }) => {
                             uploadPreset={uploadPreset}
                             cloudName={cloudName}
                             listType="picture-card"
+                            fileList={
+                              form.getFieldValue(["details", name, "image"]) || []
+                            }
                             onUploadSuccess={(data) =>
                               handleUploadSuccess(
                                 `details[${name}].image`,
                                 data,
-                                ["details", name] // Pass as array to indicate nested field
+                                ["details", name]
                               )
                             }
                           />
@@ -681,7 +706,7 @@ const Categories = ({ setActiveContent }) => {
       <Modal
         title={`Edit Category: ${selectedCategory?.shortTitle}`}
         open={isEditModalVisible}
-        onCancel={() => setIsEditModalVisible(false)}
+        onCancel={handleCancelEdit}
         footer={null}
         width={800}
       >
@@ -696,21 +721,7 @@ const Categories = ({ setActiveContent }) => {
                     { required: true, message: "Please enter category title" },
                   ]}
                 >
-                  <Input />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  label="Description Title"
-                  name="descriptionTitle"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please enter description title",
-                    },
-                  ]}
-                >
-                  <Input />
+                  <Input placeholder="e.g. Electronics" />
                 </Form.Item>
               </Col>
             </Row>
@@ -720,7 +731,10 @@ const Categories = ({ setActiveContent }) => {
               name="description"
               rules={[{ required: true, message: "Please enter description" }]}
             >
-              <Input.TextArea rows={4} />
+              <Input.TextArea
+                rows={4}
+                placeholder="Detailed description of the category"
+              />
             </Form.Item>
 
             <Row gutter={16}>
@@ -737,12 +751,9 @@ const Categories = ({ setActiveContent }) => {
                     uploadPreset={uploadPreset}
                     cloudName={cloudName}
                     listType="picture-card"
+                    fileList={form.getFieldValue("categoryImage") || []}
                     onUploadSuccess={(data) =>
-                      handleUploadSuccess(
-                        "categoryImage",
-                        data,
-                        "categoryImage"
-                      )
+                      handleUploadSuccess("categoryImage", data, "categoryImage")
                     }
                   />
                 </Form.Item>
@@ -760,6 +771,7 @@ const Categories = ({ setActiveContent }) => {
                     uploadPreset={uploadPreset}
                     cloudName={cloudName}
                     listType="picture-card"
+                    fileList={form.getFieldValue("pageImage") || []}
                     onUploadSuccess={(data) =>
                       handleUploadSuccess("pageImage", data, "pageImage")
                     }
@@ -773,7 +785,7 @@ const Categories = ({ setActiveContent }) => {
               name="seoTitle"
               rules={[{ required: true, message: "Please enter SEO title" }]}
             >
-              <Input placeholder="SEO title" />
+              <Input placeholder="Enter SEO title" />
             </Form.Item>
 
             <Form.Item
@@ -783,16 +795,16 @@ const Categories = ({ setActiveContent }) => {
                 { required: true, message: "Please enter SEO description" },
               ]}
             >
-              <Input.TextArea rows={3} />
+              <Input.TextArea rows={3} placeholder="SEO meta description" />
             </Form.Item>
 
-            <Form.Item
-              label="seoKeywords"
+            {/* <Form.Item
+              label="SEO Keywords"
               name="seoKeywords"
               rules={[{ required: true, message: "Please enter keywords" }]}
             >
               <Input placeholder="e.g. electronics, gadgets, smart devices" />
-            </Form.Item>
+            </Form.Item> */}
 
             <Row gutter={16}>
               <Col span={12}>
@@ -803,7 +815,7 @@ const Categories = ({ setActiveContent }) => {
                     { required: true, message: "Please enter detail title" },
                   ]}
                 >
-                  <Input />
+                  <Input placeholder="e.g. Explore Top Electronics" />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -814,7 +826,7 @@ const Categories = ({ setActiveContent }) => {
                     { required: true, message: "Please enter detail subtitle" },
                   ]}
                 >
-                  <Input />
+                  <Input placeholder="e.g. Best brands in one place" />
                 </Form.Item>
               </Col>
             </Row>
@@ -863,7 +875,7 @@ const Categories = ({ setActiveContent }) => {
                           <Form.Item
                             {...restField}
                             name={[name, "image"]}
-                            label="Image"
+                            label="Detail Image"
                             valuePropName="fileList"
                             getValueFromEvent={(e) =>
                               Array.isArray(e) ? e : e?.fileList || []
@@ -873,9 +885,17 @@ const Categories = ({ setActiveContent }) => {
                               cloudName={cloudName}
                               uploadPreset={uploadPreset}
                               listType="picture-card"
-                              onUploadSuccess={(fileInfo) => {
-                                console.log("Uploaded in list:", fileInfo);
-                              }}
+                              fileList={
+                                form.getFieldValue(["details", name, "image"]) ||
+                                []
+                              }
+                              onUploadSuccess={(data) =>
+                                handleUploadSuccess(
+                                  `details[${name}].image`,
+                                  data,
+                                  ["details", name]
+                                )
+                              }
                             />
                           </Form.Item>
                         </Col>
@@ -925,10 +945,6 @@ const Categories = ({ setActiveContent }) => {
                 <h4>Category Title</h4>
                 <p>{selectedCategory.shortTitle}</p>
               </Col>
-              <Col span={12}>
-                <h4>Description Title</h4>
-                <p>{selectedCategory.descriptionTitle}</p>
-              </Col>
             </Row>
 
             <h4>Description</h4>
@@ -959,8 +975,8 @@ const Categories = ({ setActiveContent }) => {
             <h4>SEO Description</h4>
             <p>{selectedCategory.seoDescription}</p>
 
-            <h4>SEO Keywords</h4>
-            <p>{selectedCategory.seoKeywords}</p>
+            {/* <h4>SEO Keywords</h4>
+            <p>{selectedCategory.seoKeywords}</p> */}
 
             <Row gutter={16}>
               <Col span={12}>

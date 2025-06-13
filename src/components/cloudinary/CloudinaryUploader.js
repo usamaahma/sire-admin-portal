@@ -1,5 +1,4 @@
-// components/CloudinaryUploader.js
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Spin, message } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
@@ -8,17 +7,22 @@ const CloudinaryUploader = ({
   onUploadSuccess,
   uploadPreset,
   cloudName,
-  buttonText = "Upload Image",
+  buttonText = "Upload Image/Video",
   className,
   listType = "text", // 'text' or 'picture-card'
   maxCount = 1,
   disabled = false,
+  fileList = [], // Required fileList prop
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [uploadedUrls, setUploadedUrls] = useState([]);
 
-  const uploadImage = async (file) => {
+  // Debug: Log fileList prop
+  useEffect(() => {
+    console.log("CloudinaryUploader fileList:", fileList);
+  }, [fileList]);
+
+  const uploadFile = async (file) => {
     setIsUploading(true);
     setProgress(0);
 
@@ -28,7 +32,7 @@ const CloudinaryUploader = ({
 
     try {
       const response = await axios.post(
-        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, // 'auto' for automatic handling of file type
         formData,
         {
           onUploadProgress: (progressEvent) => {
@@ -40,16 +44,26 @@ const CloudinaryUploader = ({
         }
       );
 
-      const imageUrl = response.data.secure_url;
+      const fileUrl = response.data.secure_url;
 
-      const updated = [...uploadedUrls, imageUrl].slice(-maxCount);
-      setUploadedUrls(updated);
+      // Create file object in Ant Design fileList format
+      const newFile = {
+        uid: `-${Math.random().toString(36).substr(2, 9)}`,
+        name: file.name || "file.mp4", // Default name if not provided
+        status: "done",
+        url: fileUrl,
+        thumbUrl: fileUrl,
+        type: file.type, // Store file type (image/video)
+      };
 
-      onUploadSuccess(response.data);
-      return imageUrl;
+      // Update fileList with new file, respecting maxCount
+      const updatedFileList = [...fileList, newFile].slice(-maxCount);
+      onUploadSuccess(updatedFileList);
+
+      return fileUrl;
     } catch (error) {
       console.error("Upload error:", error);
-      message.error("Failed to upload image");
+      message.error("Failed to upload file");
       throw error;
     } finally {
       setIsUploading(false);
@@ -61,24 +75,40 @@ const CloudinaryUploader = ({
     const file = e.target.files[0];
     if (file) {
       try {
-        return await uploadImage(file);
+        await uploadFile(file);
       } catch (error) {
-        return null;
+        // Error already handled in uploadFile
       }
     }
   };
 
-  const removeImage = (url) => {
-    setUploadedUrls(uploadedUrls.filter((u) => u !== url));
+  const removeFile = (file) => {
+    const updatedFileList = fileList.filter((f) => f.uid !== file.uid);
+    onUploadSuccess(updatedFileList); // Notify parent to update form
+  };
+
+  const renderPreview = (file) => {
+    if (file.type.includes("image")) {
+      return <img src={file.url} alt="uploaded" style={{ width: "100%", height: "100%", objectFit: "cover" }} />;
+    }
+    if (file.type.includes("video")) {
+      return (
+        <video controls style={{ width: "100%", height: "100%" }}>
+          <source src={file.url} type={file.type} />
+          Your browser does not support the video tag.
+        </video>
+      );
+    }
+    return null;
   };
 
   if (listType === "picture-card") {
     return (
       <div className={`cloudinary-uploader ${className || ""}`}>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {uploadedUrls.map((url, idx) => (
+          {fileList.map((file) => (
             <div
-              key={idx}
+              key={file.uid}
               style={{
                 position: "relative",
                 width: 100,
@@ -88,17 +118,9 @@ const CloudinaryUploader = ({
                 overflow: "hidden",
               }}
             >
-              <img
-                src={url}
-                alt="uploaded"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                }}
-              />
+              {renderPreview(file)}
               <DeleteOutlined
-                onClick={() => removeImage(url)}
+                onClick={() => removeFile(file)}
                 style={{
                   position: "absolute",
                   top: 4,
@@ -114,11 +136,11 @@ const CloudinaryUploader = ({
             </div>
           ))}
 
-          {uploadedUrls.length < maxCount && (
+          {fileList.length < maxCount && (
             <label className="upload-button">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,video/*" // Allow both image and video files
                 onChange={handleFileChange}
                 style={{ display: "none" }}
                 disabled={isUploading || disabled}
@@ -140,9 +162,7 @@ const CloudinaryUploader = ({
                 ) : (
                   <>
                     <PlusOutlined />
-                    <div style={{ fontSize: 12, marginTop: 4 }}>
-                      {buttonText}
-                    </div>
+                    <div style={{ fontSize: 12, marginTop: 4 }}>{buttonText}</div>
                   </>
                 )}
               </div>
@@ -159,20 +179,16 @@ const CloudinaryUploader = ({
       <label className="upload-button">
         <input
           type="file"
-          accept="image/*"
+          accept="image/*,video/*" // Allow both image and video files
           onChange={handleFileChange}
           style={{ display: "none" }}
           disabled={isUploading || disabled}
         />
         {isUploading ? `Uploading... ${progress}%` : buttonText}
       </label>
-      {uploadedUrls.length > 0 && (
+      {fileList.length > 0 && (
         <div style={{ marginTop: 8 }}>
-          <img
-            src={uploadedUrls[0]}
-            alt="Preview"
-            style={{ maxWidth: "100%", maxHeight: 150 }}
-          />
+          {renderPreview(fileList[0])}
         </div>
       )}
     </div>

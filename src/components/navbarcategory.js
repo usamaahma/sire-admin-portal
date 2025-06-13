@@ -104,6 +104,7 @@ function Navbarcategory() {
         isActive: true,
         position: navItems.length,
       });
+      console.log(response,"nav ki cat post")
       setNavItems([...navItems, response.data]);
       setSelectedNavItem(response.data._id);
       setCategories(prev => prev.map(cat => ({ ...cat, visible: false })));
