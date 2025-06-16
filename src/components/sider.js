@@ -19,7 +19,9 @@ import {
   LockOutlined,
   MenuOutlined,
   UserOutlined,
-  RocketOutlined, // Added for Instant Quote icon
+  RocketOutlined,
+  MailOutlined, // Added for Newsletter icon
+  TagsOutlined, // Added for Dielineform icon
 } from "@ant-design/icons";
 
 import Dashboard from "./dashboard";
@@ -41,6 +43,8 @@ import "./sider.css";
 import Contact from "./contactus";
 import Blogauthor from "./blogs/blogauthor";
 import Instantquote from "./instantquote/instantquote";
+import Newsletter from "./newsletter/newsletter";
+import Dielineform from "./dieline-form/dielineform";
 
 const AdminPortal = () => {
   const [activeContent, setActiveContent] = useState("Dashboard");
@@ -68,7 +72,7 @@ const AdminPortal = () => {
         return <Navbarcategory />;
       case "Get a Quote":
         return <Quote />;
-      case "Instant Quote": // Added case for Instant Quote
+      case "Instant Quote":
         return <Instantquote />;
       case "Portfolio":
         return <Portfolio />;
@@ -78,6 +82,10 @@ const AdminPortal = () => {
         return <Testimonial />;
       case "FAQs":
         return <Faqs />;
+      case "Newsletter": // Added case for Newsletter
+        return <Newsletter />;
+      case "Dieline Form": // Added case for Dieline Form
+        return <Dielineform />;
       case "Blog Management":
         return (
           <div className="blog-content-container">
@@ -148,11 +156,13 @@ const AdminPortal = () => {
     { name: "Navbar Categories", icon: <MenuOutlined /> },
     { name: "Categories", icon: <AppstoreOutlined /> },
     { name: "Get a Quote", icon: <FormOutlined /> },
-    { name: "Instant Quote", icon: <RocketOutlined /> }, // Added Instant Quote menu item
+    { name: "Instant Quote", icon: <RocketOutlined /> },
     { name: "Portfolio", icon: <PictureOutlined /> },
     { name: "Product Sorting", icon: <SortAscendingOutlined /> },
     { name: "Testimonial", icon: <MessageOutlined /> },
     { name: "FAQs", icon: <QuestionCircleOutlined /> },
+    { name: "Newsletter", icon: <MailOutlined /> }, // Added Newsletter menu item
+    { name: "Dieline Form", icon: <TagsOutlined /> }, // Added Dieline Form menu item
     { name: "About", icon: <InfoCircleOutlined /> },
     { name: "Terms and Conditions", icon: <FileTextOutlined /> },
     { name: "Privacy Policy", icon: <LockOutlined /> },

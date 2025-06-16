@@ -1,24 +1,25 @@
 import { useState, useEffect } from "react";
 import { Table, Button, Space, Modal, message } from "antd";
-import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, CheckOutlined } from "@ant-design/icons";
 import { portfolio, product } from "../utils/axios";
 
 const Portfolio = () => {
   const [products, setProducts] = useState([]);
+  const [portfolioItems, setPortfolioItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
 
-  // Fetch products on component mount
+  // Fetch products and portfolio items on component mount
   useEffect(() => {
     fetchProducts();
+    fetchPortfolioItems();
   }, []);
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
       const response = await product.get('/');
-      console.log(response,"get wala dataaaaaa");
       setProducts(response.data);
     } catch (error) {
       message.error('Failed to fetch products');
@@ -28,10 +29,14 @@ const Portfolio = () => {
     }
   };
 
-  // Handle view button click
-  const handleView = (id) => {
-    console.log("View Product ID:", id);
-    // Add your view product logic here
+  const fetchPortfolioItems = async () => {
+    try {
+      const response = await portfolio.get('/');
+      setPortfolioItems(response.data.map(item => item.productId));
+    } catch (error) {
+      message.error('Failed to fetch portfolio items');
+      console.error('Error fetching portfolio items:', error);
+    }
   };
 
   // Handle Add to Portfolio button click
@@ -48,13 +53,20 @@ const Portfolio = () => {
       await portfolio.post('/', { productId: selectedProductId });
       message.success('Product added to portfolio successfully!');
       setIsModalVisible(false);
+      // Update the portfolio items state
+      setPortfolioItems([...portfolioItems, selectedProductId]);
     } catch (error) {
       message.error('Failed to add product to portfolio');
       console.error('Error adding to portfolio:', error);
     }
   };
 
-  // Simplified table columns with only title and image
+  // Check if product is in portfolio
+  const isInPortfolio = (productId) => {
+    return portfolioItems.includes(productId);
+  };
+
+  // Table columns
   const columns = [
     {
       title: "Title",
@@ -74,20 +86,24 @@ const Portfolio = () => {
       key: "action",
       render: (_, record) => (
         <Space size="middle">
-          <Button
-            type="primary"
-            icon={<EyeOutlined />}
-            onClick={() => handleView(record._id)}
-          >
-            View
-          </Button>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => handleAddToPortfolio(record._id)}
-          >
-            Add to Portfolio
-          </Button>
+          {isInPortfolio(record._id) ? (
+            <Button
+              type="primary"
+              icon={<CheckOutlined />}
+              disabled
+              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+            >
+              Added to Portfolio
+            </Button>
+          ) : (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => handleAddToPortfolio(record._id)}
+            >
+              Add to Portfolio
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -100,9 +116,9 @@ const Portfolio = () => {
       <Table
         columns={columns}
         dataSource={products}
-        rowKey="id"
+        rowKey="_id"
         loading={loading}
-        pagination={{ pageSize: 5 }}
+        pagination={{ pageSize: 15 }}
         bordered
         style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
       />
