@@ -88,65 +88,65 @@ const Categories = ({ setActiveContent }) => {
   };
 
   // Edit Category
-  const handleEdit = (id) => {
-    const category = categories.find((category) => category._id === id);
-    if (!category) {
-      console.error("Category not found for ID:", id);
-      return;
-    }
+const handleEdit = (id) => {
+  const category = categories.find((category) => category._id === id);
+  if (!category) {
+    console.error("Category not found for ID:", id);
+    return;
+  }
 
-    const formValues = {
-      shortTitle: category.shortTitle || "",
-      description: category.description || "",
-      descriptionTitle: category.descriptionTitle || "",
-      seoTitle: category.seoTitle || "",
-      seoDescription: category.seoDescription || "",
-      seoKeywords: category.seoKeywords?.split(",").map((k) => k.trim()) || [],
-      detailTitle: category.detailTitle || "",
-      detailSubtitle: category.detailSubtitle || "",
-      categoryImage: category.categoryImage
+  const formValues = {
+    shortTitle: category.shortTitle || "",
+    description: category.description || "",
+    descriptionTitle: category.descriptionTitle || "",
+    seoTitle: category.seoTitle || "",
+    seoDescription: category.seoDescription || "",
+    seoKeywords: category.seoKeywords?.split(",").map((k) => k.trim()) || [],
+    detailTitle: category.detailTitle || "",
+    detailSubtitle: category.detailSubtitle || "",
+    categoryImage: category.categoryImage
+      ? [
+          {
+            uid: "-1",
+            name: "category-image.png",
+            status: "done",
+            url: category.categoryImage,
+            thumbUrl: category.categoryImage,
+          },
+        ]
+      : [],
+    pageImage: category.pageImage
+      ? [
+          {
+            uid: "-2",
+            name: "page-image.png",
+            status: "done",
+            url: category.pageImage,
+            thumbUrl: category.pageImage,
+          },
+        ]
+      : [],
+    details: (category.details || []).map((detail, index) => ({
+      detailDescription: detail.detailDescription || "",
+      image: detail.image
         ? [
             {
-              uid: "-1",
-              name: "category-image.png",
+              uid: `detail-${index}`,
+              name: `detail-image-${index}.png`,
               status: "done",
-              url: category.categoryImage,
-              thumbUrl: category.categoryImage,
+              url: detail.image,
+              thumbUrl: detail.image,
             },
           ]
-        : [],
-      pageImage: category.pageImage
-        ? [
-            {
-              uid: "-2",
-              name: "page-image.png",
-              status: "done",
-              url: category.pageImage,
-              thumbUrl: category.pageImage,
-            },
-          ]
-        : [],
-      details: (category.details || []).map((detail, index) => ({
-        detailDescription: detail.detailDescription || "",
-        image: detail.image
-          ? [
-              {
-                uid: `detail-${index}`,
-                name: `detail-image-${index}.png`,
-                status: "done",
-                url: detail.image,
-                thumbUrl: detail.image,
-              },
-            ]
-          : [],
-      })),
-    };
-
-    console.log("Form Values for Edit:", formValues); // Debug
-    form.setFieldsValue(formValues);
-    setSelectedCategory(category);
-    setIsEditModalVisible(true);
+        : [], // Ensure this is always an array
+    })),
   };
+
+  console.log("Form Values for Edit:", formValues);
+  form.setFieldsValue(formValues);
+  setSelectedCategory(category);
+  setIsEditModalVisible(true);
+};
 
   // Handle cancel for edit modal
   const handleCancelEdit = () => {

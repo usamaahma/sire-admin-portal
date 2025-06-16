@@ -16,17 +16,13 @@ import {
   Row,
   Col,
   Spin,
-  Upload,
 } from "antd";
-import {
-  UploadOutlined,
-  PlusOutlined,
-  MinusCircleOutlined,
-} from "@ant-design/icons";
+import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import ReactQuill from "react-quill";
 import "./product.css";
 import { category, product, subcategory } from "../utils/axios";
+import CloudinaryUploader from "./cloudinary/CloudinaryUploader";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -41,109 +37,6 @@ const modules = {
     ["link", "image"],
     ["clean"],
   ],
-};
-
-const CloudinaryUploader = ({
-  cloudName,
-  uploadPreset,
-  listType,
-  maxCount,
-  multiple,
-  children,
-  onChange: externalOnChange,
-  form,
-  fieldName,
-}) => {
-  const [fileList, setFileList] = useState([]);
-
-  const customRequest = async ({ file, onSuccess, onError }) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", uploadPreset);
-    formData.append("cloud_name", cloudName);
-
-    try {
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/${
-          file.type.startsWith('video/') ? 'video' : 'image'
-        }/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-      const data = await response.json();
-      if (data.secure_url) {
-        const newFile = {
-          uid: file.uid,
-          name: file.name,
-          status: "done",
-          url: data.secure_url,
-          type: file.type,
-          response: { url: data.secure_url },
-        };
-        onSuccess(newFile, file);
-        const updatedFileList =
-          maxCount === 1 ? [newFile] : [...fileList, newFile];
-        setFileList(updatedFileList);
-        if (form && fieldName) {
-          form.setFieldsValue({
-            [fieldName]: updatedFileList,
-          });
-        }
-        externalOnChange?.({ fileList: updatedFileList });
-      } else {
-        console.error("Cloudinary response:", data);
-        onError(new Error("Upload failed"));
-        message.error("Upload failed!");
-      }
-    } catch (error) {
-      console.error("Cloudinary upload error:", error);
-      onError(error);
-      message.error("Upload failed! Check console for details.");
-    }
-  };
-
-  const handleChange = ({ fileList: newFileList }) => {
-    setFileList(newFileList);
-    externalOnChange?.({ fileList: newFileList });
-    if (form && fieldName) {
-      form.setFieldsValue({
-        [fieldName]: newFileList,
-      });
-    }
-  };
-
-  const beforeUpload = (file) => {
-    const isMedia = file.type.startsWith("image/") || file.type.startsWith("video/");
-    if (!isMedia) {
-      message.error("You can only upload image or video files!");
-      return false;
-    }
-    
-    const maxSize = file.type.startsWith("video/") ? 100 : 5; // 100MB for videos, 5MB for images
-    const isWithinSizeLimit = file.size / 1024 / 1024 < maxSize;
-    if (!isWithinSizeLimit) {
-      message.error(`File must be smaller than ${maxSize}MB!`);
-      return false;
-    }
-    return true;
-  };
-
-  return (
-    <Upload
-      customRequest={customRequest}
-      listType={listType}
-      fileList={fileList}
-      maxCount={maxCount}
-      multiple={multiple}
-      onChange={handleChange}
-      accept="image/*,video/*"
-      beforeUpload={beforeUpload}
-    >
-      {fileList.length < (maxCount || Infinity) && children}
-    </Upload>
-  );
 };
 
 const Products = () => {
@@ -277,7 +170,7 @@ const Products = () => {
         setIsLoading(true);
         try {
           const productData = formatProductData(values);
-          console.log("Sending product data:", productData);
+          console.log("Sending product data to backend:", productData);
           let response;
           if (editingProduct) {
             response = await product.patch(
@@ -312,6 +205,7 @@ const Products = () => {
           console.error("API Error:", error.response || error);
           message.error(
             error.response?.data?.message ||
+              error.message ||
               "An error occurred while saving the product"
           );
         } finally {
@@ -327,8 +221,8 @@ const Products = () => {
     let salePriceEffectiveDate;
     if (values.salePriceEffectiveDate) {
       salePriceEffectiveDate = {
-        start: values.salePriceEffectiveDate[0].format(),
-        end: values.salePriceEffectiveDate[1].format(),
+        start: values.salePriceEffectiveDate[0]?.format(),
+        end: values.salePriceEffectiveDate[1]?.format(),
       };
     }
 
@@ -354,10 +248,7 @@ const Products = () => {
         },
         variantSpecifications:
           variant.variantSpecifications?.map((spec) => ({
-            image:
-              spec?.image?.[0]?.response?.url ||
-              spec?.image?.[0]?.url ||
-              "https://via.placeholder.com/100",
+            image: spec.image?.[0]?.url || "https://via.placeholder.com/100",
             title: spec.title,
             description: spec.description,
           })) || [],
@@ -366,10 +257,7 @@ const Products = () => {
         detailDescription:
           variant.detailDescription?.map((desc) => ({
             description: desc.description,
-            image:
-              desc.image?.[0]?.response?.url ||
-              desc.image?.[0]?.url ||
-              undefined,
+            image: desc.image?.[0]?.url || undefined,
           })) || [],
       })) || [];
 
@@ -388,23 +276,10 @@ const Products = () => {
         : [],
       googleProductCategory: values.googleProductCategory,
       productType: values.productType,
-      image:
-        values.mainImage?.[0]?.response?.url ||
-        values.mainImage?.[0]?.url ||
-        "https://via.placeholder.com/100",
-      pdfImage:
-        values.pdfImage?.[0]?.response?.url || values.pdfImage?.[0]?.url,
+      image: values.mainImage?.[0]?.url || "https://via.placeholder.com/100",
+      pdfImage: values.pdfImage?.[0]?.url || undefined,
       additionalImages:
-        values.additionalImages
-          ?.map((img) => {
-            const url = img.response?.url || img.url;
-            if (!url) {
-              console.warn("Invalid image URL in additionalImages:", img);
-              return null;
-            }
-            return url;
-          })
-          .filter((url) => url) || [],
+        values.additionalImages?.map((img) => img.url).filter((url) => url) || [],
       shipping: values.shippingCountry
         ? [
             {
@@ -420,14 +295,6 @@ const Products = () => {
       ...(values.salePrice && { salePrice: values.salePrice }),
       ...(salePriceEffectiveDate && { salePriceEffectiveDate }),
       variants: formattedVariants,
-      specifications:
-        values.specifications?.map((spec) => ({
-          ...spec,
-          image:
-            spec.image?.[0]?.response?.url ||
-            spec.image?.[0]?.url ||
-            "https://via.placeholder.com/100",
-        })) || [],
       brand: values.brand,
       condition: values.condition,
       availability: values.availability,
@@ -485,6 +352,8 @@ const Products = () => {
               name: "main-image.png",
               status: "done",
               url: record.image,
+              thumbUrl: record.image,
+              type: "image/jpeg",
             },
           ]
         : [],
@@ -495,6 +364,8 @@ const Products = () => {
               name: "pdf-image.png",
               status: "done",
               url: record.pdfImage,
+              thumbUrl: record.pdfImage,
+               type: record.pdfImage.includes('.mp4') ? 'video/mp4' : 'image/jpeg',
             },
           ]
         : [],
@@ -504,9 +375,11 @@ const Products = () => {
           name: `image-${index}.png`,
           status: "done",
           url,
+          thumbUrl: url,
+        type: url.includes('.mp4') ? 'video/mp4' : 'image/jpeg',
         })) || [],
       salePriceEffectiveDate,
-      variants: record.variants?.map((variant) => ({
+      variants: record.variants?.map((variant, variantIndex) => ({
         ...variant,
         dimensions: {
           length: variant.dimensions?.length || 0,
@@ -523,54 +396,45 @@ const Products = () => {
           faqs: variant.variantDetail?.faqs || [],
         },
         variantSpecifications:
-          variant.variantSpecifications?.map((spec) => ({
+          variant.variantSpecifications?.map((spec, specIndex) => ({
             ...spec,
             image: spec.image
               ? [
                   {
-                    uid: `${Math.random()}`,
-                    name: "spec-image.png",
+                    uid: `spec-${variantIndex}-${specIndex}`,
+                    name: `spec-image-${specIndex}.png`,
                     status: "done",
                     url: spec.image,
+                    thumbUrl: spec.image,
+                    type: "image/jpeg",
                   },
                 ]
               : [],
           })) || [],
         detailDescription:
-          variant.detailDescription?.map((desc) => ({
-            description: desc.description,
+          variant.detailDescription?.map((desc, descIndex) => ({
+            description: desc.description || "",
             image: desc.image
               ? [
                   {
-                    uid: `${Math.random()}`,
-                    name: "desc-image.png",
+                    uid: `desc-${variantIndex}-${descIndex}`,
+                    name: `desc-image-${descIndex}.png`,
                     status: "done",
                     url: desc.image,
+                    thumbUrl: desc.image,
+                    type: "image/jpeg",
                   },
                 ]
               : [],
           })) || [],
-      })),
-      specifications:
-        record.specifications?.map((spec) => ({
-          ...spec,
-          image: spec.image
-            ? [
-                {
-                  uid: `${Math.random()}`,
-                  name: "spec-image.png",
-                  status: "done",
-                  url: spec.image,
-                },
-              ]
-            : [],
-        })) || [],
+      })) || [],
       reviews:
         record.reviews?.map((review) => ({
           rating: review.rating,
         })) || [],
     };
 
+    console.log("Setting form data for edit:", JSON.stringify(formattedData, null, 2));
     form.setFieldsValue(formattedData);
   };
 
@@ -605,20 +469,15 @@ const Products = () => {
   };
 
   const normFile = (e) => {
-    console.log("normFile input:", e);
+    console.log("normFile input:", JSON.stringify(e, null, 2));
     if (Array.isArray(e)) return e;
     const fileList = e?.fileList || [];
-    console.log("normFile output:", fileList);
+    console.log("normFile output:", JSON.stringify(fileList, null, 2));
     return fileList;
   };
 
   const validateImage = (_, value) => {
-    console.log("Validating image field:", value);
-    if (
-      !value ||
-      value.length === 0 ||
-      !value.some((file) => file.status === "done")
-    ) {
+    if (!value || value.length === 0 || !value.some((file) => file.status === "done")) {
       return Promise.reject(new Error("Please upload an image!"));
     }
     return Promise.resolve();
@@ -705,9 +564,7 @@ const Products = () => {
             <Form.Item
               name="title"
               label="Product Title"
-              rules={[
-                { required: true, message: "Please input product title!" },
-              ]}
+              rules={[{ required: true, message: "Please input product title!" }]}
             >
               <Input placeholder="Enter product title" />
             </Form.Item>
@@ -728,12 +585,7 @@ const Products = () => {
                 <Form.Item
                   name="categories"
                   label="Categories"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please select at least one category!",
-                    },
-                  ]}
+                  rules={[{ required: true, message: "Please select at least one category!" }]}
                 >
                   <Select
                     mode="multiple"
@@ -766,12 +618,7 @@ const Products = () => {
                 <Form.Item
                   name="subcategories"
                   label="Subcategories"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please select at least one subcategory!",
-                    },
-                  ]}
+                  rules={[{ required: true, message: "Please select at least one subcategory!" }]}
                 >
                   <Select
                     mode="multiple"
@@ -823,14 +670,12 @@ const Products = () => {
                 uploadPreset={uploadPreset}
                 listType="picture-card"
                 maxCount={1}
-                form={form}
-                fieldName="mainImage"
-              >
-                <div>
-                  <PlusOutlined />
-                  <div style={{ marginTop: 8 }}>Upload Main Image</div>
-                </div>
-              </CloudinaryUploader>
+                onUploadSuccess={(fileList) => {
+                  console.log("Main Image uploaded:", JSON.stringify(fileList, null, 2));
+                  form.setFieldValue("mainImage", fileList);
+                }}
+                fileList={form.getFieldValue("mainImage") || []}
+              />
             </Form.Item>
 
             <Form.Item
@@ -844,14 +689,12 @@ const Products = () => {
                 uploadPreset={uploadPreset}
                 listType="picture-card"
                 maxCount={1}
-                form={form}
-                fieldName="pdfImage"
-              >
-                <div>
-                  <PlusOutlined />
-                  <div style={{ marginTop: 8 }}>Upload PDF Image</div>
-                </div>
-              </CloudinaryUploader>
+                onUploadSuccess={(fileList) => {
+                  console.log("PDF Image uploaded:", JSON.stringify(fileList, null, 2));
+                  form.setFieldValue("pdfImage", fileList);
+                }}
+                fileList={form.getFieldValue("pdfImage") || []}
+              />
             </Form.Item>
 
             <Form.Item
@@ -864,15 +707,13 @@ const Products = () => {
                 cloudName={cloudName}
                 uploadPreset={uploadPreset}
                 listType="picture-card"
-                multiple
-                form={form}
-                fieldName="additionalImages"
-              >
-                <div>
-                  <PlusOutlined />
-                  <div style={{ marginTop: 8 }}>Upload</div>
-                </div>
-              </CloudinaryUploader>
+                maxCount={10}
+                onUploadSuccess={(fileList) => {
+                  console.log("Additional Images uploaded:", JSON.stringify(fileList, null, 2));
+                  form.setFieldValue("additionalImages", fileList);
+                }}
+                fileList={form.getFieldValue("additionalImages") || []}
+              />
             </Form.Item>
 
             <Divider
@@ -1067,12 +908,7 @@ const Products = () => {
                             {...restField}
                             name={[name, "variantTitle"]}
                             label="Variant Title"
-                            rules={[
-                              {
-                                required: true,
-                                message: "Missing variant title",
-                              },
-                            ]}
+                            rules={[{ required: true, message: "Missing variant title" }]}
                           >
                             <Input placeholder="e.g., Large Box" />
                           </Form.Item>
@@ -1177,35 +1013,28 @@ const Products = () => {
                       <Form.List name={[name, "variantDetail", "material"]}>
                         {(fields, { add, remove }) => (
                           <>
-                            {fields.map(
-                              ({ key, name: fieldName, ...restField }) => (
-                                <Row key={key} gutter={16}>
-                                  <Col span={22}>
-                                    <Form.Item
-                                      {...restField}
-                                      name={fieldName}
-                                      rules={[
-                                        {
-                                          required: true,
-                                          message: "Enter material",
-                                        },
-                                      ]}
-                                    >
-                                      <Input placeholder="e.g., Kraft Paper" />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={2}>
-                                    <Button
-                                      type="link"
-                                      danger
-                                      onClick={() => remove(fieldName)}
-                                    >
-                                      Remove
-                                    </Button>
-                                  </Col>
-                                </Row>
-                              )
-                            )}
+                            {fields.map(({ key, name: fieldName, ...restField }) => (
+                              <Row key={key} gutter={16}>
+                                <Col span={22}>
+                                  <Form.Item
+                                    {...restField}
+                                    name={fieldName}
+                                    rules={[{ required: true, message: "Enter material" }]}
+                                  >
+                                    <Input placeholder="e.g., Kraft Paper" />
+                                  </Form.Item>
+                                </Col>
+                                <Col span={2}>
+                                  <Button
+                                    type="link"
+                                    danger
+                                    onClick={() => remove(fieldName)}
+                                  >
+                                    Remove
+                                  </Button>
+                                </Col>
+                              </Row>
+                            ))}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1224,35 +1053,28 @@ const Products = () => {
                       <Form.List name={[name, "variantDetail", "colormodel"]}>
                         {(fields, { add, remove }) => (
                           <>
-                            {fields.map(
-                              ({ key, name: fieldName, ...restField }) => (
-                                <Row key={key} gutter={16}>
-                                  <Col span={22}>
-                                    <Form.Item
-                                      {...restField}
-                                      name={fieldName}
-                                      rules={[
-                                        {
-                                          required: true,
-                                          message: "Enter color model",
-                                        },
-                                      ]}
-                                    >
-                                      <Input placeholder="e.g., CMYK" />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={2}>
-                                    <Button
-                                      type="link"
-                                      danger
-                                      onClick={() => remove(fieldName)}
-                                    >
-                                      Remove
-                                    </Button>
-                                  </Col>
-                                </Row>
-                              )
-                            )}
+                            {fields.map(({ key, name: fieldName, ...restField }) => (
+                              <Row key={key} gutter={16}>
+                                <Col span={22}>
+                                  <Form.Item
+                                    {...restField}
+                                    name={fieldName}
+                                    rules={[{ required: true, message: "Enter color model" }]}
+                                  >
+                                    <Input placeholder="e.g., CMYK" />
+                                  </Form.Item>
+                                </Col>
+                                <Col span={2}>
+                                  <Button
+                                    type="link"
+                                    danger
+                                    onClick={() => remove(fieldName)}
+                                  >
+                                    Remove
+                                  </Button>
+                                </Col>
+                              </Row>
+                            ))}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1271,35 +1093,28 @@ const Products = () => {
                       <Form.List name={[name, "variantDetail", "finishing"]}>
                         {(fields, { add, remove }) => (
                           <>
-                            {fields.map(
-                              ({ key, name: fieldName, ...restField }) => (
-                                <Row key={key} gutter={16}>
-                                  <Col span={22}>
-                                    <Form.Item
-                                      {...restField}
-                                      name={fieldName}
-                                      rules={[
-                                        {
-                                          required: true,
-                                          message: "Enter finishing",
-                                        },
-                                      ]}
-                                    >
-                                      <Input placeholder="e.g., Glossy" />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={2}>
-                                    <Button
-                                      type="link"
-                                      danger
-                                      onClick={() => remove(fieldName)}
-                                    >
-                                      Remove
-                                    </Button>
-                                  </Col>
-                                </Row>
-                              )
-                            )}
+                            {fields.map(({ key, name: fieldName, ...restField }) => (
+                              <Row key={key} gutter={16}>
+                                <Col span={22}>
+                                  <Form.Item
+                                    {...restField}
+                                    name={fieldName}
+                                    rules={[{ required: true, message: "Enter finishing" }]}
+                                  >
+                                    <Input placeholder="e.g., Glossy" />
+                                  </Form.Item>
+                                </Col>
+                                <Col span={2}>
+                                  <Button
+                                    type="link"
+                                    danger
+                                    onClick={() => remove(fieldName)}
+                                  >
+                                    Remove
+                                  </Button>
+                                </Col>
+                              </Row>
+                            ))}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1318,26 +1133,24 @@ const Products = () => {
                       <Form.List name={[name, "variantDetail", "addon"]}>
                         {(fields, { add, remove }) => (
                           <>
-                            {fields.map(
-                              ({ key, name: fieldName, ...restField }) => (
-                                <Row key={key} gutter={16}>
-                                  <Col span={22}>
-                                    <Form.Item {...restField} name={fieldName}>
-                                      <Input placeholder="e.g., Handle Cutouts" />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={2}>
-                                    <Button
-                                      type="link"
-                                      danger
-                                      onClick={() => remove(fieldName)}
-                                    >
-                                      Remove
-                                    </Button>
-                                  </Col>
-                                </Row>
-                              )
-                            )}
+                            {fields.map(({ key, name: fieldName, ...restField }) => (
+                              <Row key={key} gutter={16}>
+                                <Col span={22}>
+                                  <Form.Item {...restField} name={fieldName}>
+                                    <Input placeholder="e.g., Handle Cutouts" />
+                                  </Form.Item>
+                                </Col>
+                                <Col span={2}>
+                                  <Button
+                                    type="link"
+                                    danger
+                                    onClick={() => remove(fieldName)}
+                                  >
+                                    Remove
+                                  </Button>
+                                </Col>
+                              </Row>
+                            ))}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1356,35 +1169,28 @@ const Products = () => {
                       <Form.List name={[name, "variantDetail", "turnaround"]}>
                         {(fields, { add, remove }) => (
                           <>
-                            {fields.map(
-                              ({ key, name: fieldName, ...restField }) => (
-                                <Row key={key} gutter={16}>
-                                  <Col span={22}>
-                                    <Form.Item
-                                      {...restField}
-                                      name={fieldName}
-                                      rules={[
-                                        {
-                                          required: true,
-                                          message: "Enter turnaround",
-                                        },
-                                      ]}
-                                    >
-                                      <Input placeholder="e.g., 5 Days" />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={2}>
-                                    <Button
-                                      type="link"
-                                      danger
-                                      onClick={() => remove(fieldName)}
-                                    >
-                                      Remove
-                                    </Button>
-                                  </Col>
-                                </Row>
-                              )
-                            )}
+                            {fields.map(({ key, name: fieldName, ...restField }) => (
+                              <Row key={key} gutter={16}>
+                                <Col span={22}>
+                                  <Form.Item
+                                    {...restField}
+                                    name={fieldName}
+                                    rules={[{ required: true, message: "Enter turnaround" }]}
+                                  >
+                                    <Input placeholder="e.g., 5 Days" />
+                                  </Form.Item>
+                                </Col>
+                                <Col span={2}>
+                                  <Button
+                                    type="link"
+                                    danger
+                                    onClick={() => remove(fieldName)}
+                                  >
+                                    Remove
+                                  </Button>
+                                </Col>
+                              </Row>
+                            ))}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1403,51 +1209,39 @@ const Products = () => {
                       <Form.List name={[name, "variantDetail", "faqs"]}>
                         {(fields, { add, remove }) => (
                           <>
-                            {fields.map(
-                              ({ key, name: fieldName, ...restField }) => (
-                                <div key={key} style={{ marginBottom: 8 }}>
-                                  <Row gutter={16}>
-                                    <Col span={11}>
-                                      <Form.Item
-                                        {...restField}
-                                        name={[fieldName, "question"]}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message: "Enter question",
-                                          },
-                                        ]}
-                                      >
-                                        <Input placeholder="Question" />
-                                      </Form.Item>
-                                    </Col>
-                                    <Col span={11}>
-                                      <Form.Item
-                                        {...restField}
-                                        name={[fieldName, "answer"]}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message: "Enter answer",
-                                          },
-                                        ]}
-                                      >
-                                        <Input placeholder="Answer" />
-                                      </Form.Item>
-                                    </Col>
-                                    <Col span={2}>
-                                      <Button
-                                        type="link"
-                                        danger
-                                        onClick={() => remove(fieldName)}
-                                      >
-                                        Remove
-                                      </Button>
-                                    </Col>
-                                  </Row>
-                                </div>
-                              )
-                            )}
+                            {fields.map(({ key, name: fieldName, ...restField }) => (
+                              <div key={key} style={{ marginBottom: 8 }}>
+                                <Row gutter={16}>
+                                  <Col span={11}>
+                                    <Form.Item
+                                      {...restField}
+                                      name={[fieldName, "question"]}
+                                      rules={[{ required: true, message: "Enter question" }]}
+                                    >
+                                      <Input placeholder="Question" />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={11}>
+                                    <Form.Item
+                                      {...restField}
+                                      name={[fieldName, "answer"]}
+                                      rules={[{ required: true, message: "Enter answer" }]}
+                                    >
+                                      <Input placeholder="Answer" />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={2}>
+                                    <Button
+                                      type="link"
+                                      danger
+                                      onClick={() => remove(fieldName)}
+                                    >
+                                      Remove
+                                    </Button>
+                                  </Col>
+                                </Row>
+                              </div>
+                            ))}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1462,111 +1256,90 @@ const Products = () => {
                         )}
                       </Form.List>
 
-                      <Divider orientation="left">
-                        Variant Specifications
-                      </Divider>
+                      <Divider orientation="left">Variant Specifications</Divider>
                       <Form.List name={[name, "variantSpecifications"]}>
                         {(fields, { add, remove }) => (
                           <>
-                            {fields.map(
-                              ({ key, name: fieldName, ...restField }) => (
-                                <div
-                                  key={key}
-                                  style={{
-                                    marginBottom: 16,
-                                    border: "1px solid #d9d9d9",
-                                    padding: 16,
-                                    borderRadius: 4,
-                                  }}
-                                >
-                                  <Row gutter={16} justify="center">
-                                    <Col span={24} style={{ marginBottom: 8 }}>
-                                      <div
-                                        style={{
-                                          fontWeight: "bold",
-                                          fontSize: 16,
-                                          textAlign: "center",
-                                        }}
-                                      >
-                                        Specification Image
-                                      </div>
-                                    </Col>
-                                    <Col
-                                      span={24}
+                            {fields.map(({ key, name: fieldName, ...restField }) => (
+                              <div
+                                key={key}
+                                style={{
+                                  marginBottom: 16,
+                                  border: "1px solid #d9d9d9",
+                                  padding: 16,
+                                  borderRadius: 4,
+                                }}
+                              >
+                                <Row gutter={16} justify="center">
+                                  <Col span={24} style={{ marginBottom: 16 }}>
+                                    <div
                                       style={{
+                                        fontWeight: "bold",
+                                        fontSize: 16,
                                         textAlign: "center",
-                                        marginBottom: 16,
                                       }}
                                     >
-                                      <Form.Item
-                                        {...restField}
-                                        name={[fieldName, "image"]}
-                                        valuePropName="fileList"
-                                        getValueFromEvent={normFile}
-                                        rules={[{ validator: validateImage }]}
-                                      >
-                                        <CloudinaryUploader
-                                          cloudName={cloudName}
-                                          uploadPreset={uploadPreset}
-                                          listType="picture"
-                                          maxCount={1}
-                                          form={form}
-                                          fieldName={`variants[${name}].variantSpecifications[${fieldName}].image`}
-                                        >
-                                          <Button icon={<UploadOutlined />}>
-                                            Upload
-                                          </Button>
-                                        </CloudinaryUploader>
-                                      </Form.Item>
-                                    </Col>
-                                  </Row>
+                                      Specification Image
+                                    </div>
+                                  </Col>
+                                  <Col span={24} style={{ textAlign: "center", marginBottom: 16 }}>
+                                    <Form.Item
+                                      {...restField}
+                                      name={[fieldName, "image"]}
+                                      valuePropName="fileList"
+                                      getValueFromEvent={normFile}
+                                      rules={[{ validator: validateImage }]}
+                                    >
+                                      <CloudinaryUploader
+                                        cloudName={cloudName}
+                                        uploadPreset={uploadPreset}
+                                        listType="picture-card"
+                                        maxCount={1}
+                                        onUploadSuccess={(fileList) => {
+                                          console.log(`Variant Spec Image uploaded [${name}][${fieldName}]:`, JSON.stringify(fileList, null, 2));
+                                          form.setFieldValue(["variants", name, "variantSpecifications", fieldName, "image"], fileList);
+                                        }}
+                                        fileList={form.getFieldValue(["variants", name, "variantSpecifications", fieldName, "image"]) || []}
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                </Row>
 
-                                  <Row gutter={16} align="middle">
-                                    <Col span={8}>
-                                      <Form.Item
-                                        {...restField}
-                                        name={[fieldName, "title"]}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message: "Enter title",
-                                          },
-                                        ]}
-                                      >
-                                        <Input placeholder="Title" />
-                                      </Form.Item>
-                                    </Col>
-                                    <Col span={14}>
-                                      <Form.Item
-                                        {...restField}
-                                        name={[fieldName, "description"]}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message: "Enter description",
-                                          },
-                                        ]}
-                                      >
-                                        <TextArea
-                                          placeholder="Description"
-                                          rows={4}
-                                          style={{ resize: "vertical" }}
-                                        />
-                                      </Form.Item>
-                                    </Col>
-                                    <Col span={2}>
-                                      <Button
-                                        type="link"
-                                        danger
-                                        onClick={() => remove(fieldName)}
-                                      >
-                                        Remove
-                                      </Button>
-                                    </Col>
-                                  </Row>
-                                </div>
-                              )
-                            )}
+                                <Row gutter={16} align="middle">
+                                  <Col span={8}>
+                                    <Form.Item
+                                      {...restField}
+                                      name={[fieldName, "title"]}
+                                      rules={[{ required: true, message: "Enter title" }]}
+                                    >
+                                      <Input placeholder="Title" />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={14}>
+                                    <Form.Item
+                                      {...restField}
+                                      name={[fieldName, "description"]}
+                                      rules={[{ required: true, message: "Enter description" }]}
+                                    >
+                                      <TextArea
+                                        placeholder="Description"
+                                        rows={4}
+                                        style={{ resize: "vertical" }}
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={2}>
+                                    <Button
+                                      type="link"
+                                      danger
+                                      onClick={() => remove(fieldName)}
+                                    >
+                                      Remove
+                                    </Button>
+                                  </Col>
+                                </Row>
+                              </div>
+                            ))}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1585,76 +1358,68 @@ const Products = () => {
                       <Form.List name={[name, "detailDescription"]}>
                         {(descFields, { add: addDesc, remove: removeDesc }) => (
                           <>
-                            {descFields.map(
-                              ({
-                                key: descKey,
-                                name: descName,
-                                ...descRestField
-                              }) => (
-                                <div
-                                  key={descKey}
-                                  style={{
-                                    marginBottom: 16,
-                                    border: "1px solid #d9d9d9",
-                                    padding: 16,
-                                    borderRadius: 4,
-                                  }}
-                                >
-                                  <Row gutter={16}>
-                                    <Col span={22}>
-                                      <Form.Item
-                                        {...descRestField}
-                                        name={[descName, "description"]}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message:
-                                              "Please enter description!",
-                                          },
-                                        ]}
-                                      >
-                                        <ReactQuill
-                                          theme="snow"
-                                          modules={modules}
-                                        />
-                                      </Form.Item>
-                                    </Col>
-                                    <Col span={2}>
-                                      <Button
-                                        type="link"
-                                        danger
-                                        onClick={() => removeDesc(descName)}
-                                      >
-                                        Remove
-                                      </Button>
-                                    </Col>
-                                  </Row>
-                                  <Row gutter={16}>
-                                    <Col span={24}>
-                                      <Form.Item
-                                        {...descRestField}
-                                        name={[descName, "image"]}
-                                        valuePropName="fileList"
-                                        getValueFromEvent={normFile}
-                                      >
-                                        <CloudinaryUploader
-                                          cloudName={cloudName}
-                                          uploadPreset={uploadPreset}
-                                          listType="picture"
-                                          maxCount={1}
-                                          form={form}
-                                          fieldName={`variants[${name}].detailDescription[${descName}].image`}
-                                        >
-                                          <Button icon={<UploadOutlined />}>
-                                            Upload Image
-                                          </Button>
-                                        </CloudinaryUploader>
-                                      </Form.Item>
-                                    </Col>
-                                  </Row>
-                                </div>
-                              )
-                            )}
+                            {descFields.map(({ key: descKey, name: descName, ...descRestField }) => (
+                              <div
+                                key={descKey}
+                                style={{
+                                  marginBottom: 16,
+                                  border: "1px solid #d9d9d9",
+                                  padding: 16,
+                                  borderRadius: 4,
+                                }}
+                              >
+                                <Row gutter={16}>
+                                  <Col span={22}>
+                                    <Form.Item
+                                      {...descRestField}
+                                      name={[descName, "description"]}
+                                      rules={[{ required: true, message: "Please enter description!" }]}
+                                    >
+                                      <ReactQuill
+                                        theme="snow"
+                                        modules={modules}
+                                        onChange={(value) => {
+                                          console.log(`Detail Description updated [${name}][${descName}]:`, value);
+                                          form.setFieldValue(["variants", name, "detailDescription", descName, "description"], value);
+                                        }}
+                                        value={form.getFieldValue(["variants", name, "detailDescription", descName, "description"]) || ""}
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={2}>
+                                    <Button
+                                      type="link"
+                                      danger
+                                      onClick={() => removeDesc(descName)}
+                                    >
+                                      Remove
+                                    </Button>
+                                  </Col>
+                                </Row>
+                                <Row gutter={16}>
+                                  <Col span={24}>
+                                    <Form.Item
+                                      {...descRestField}
+                                      name={[descName, "image"]}
+                                      valuePropName="fileList"
+                                      getValueFromEvent={normFile}
+                                    >
+                                      <CloudinaryUploader
+                                        cloudName={cloudName}
+                                        uploadPreset={uploadPreset}
+                                        listType="picture-card"
+                                        maxCount={1}
+                                        onUploadSuccess={(fileList) => {
+                                          console.log(`Detail Desc Image uploaded [${name}][${descName}]:`, JSON.stringify(fileList, null, 2));
+                                          form.setFieldValue(["variants", name, "detailDescription", descName, "image"], fileList);
+                                        }}
+                                        fileList={form.getFieldValue(["variants", name, "detailDescription", descName, "image"]) || []}
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                </Row>
+                              </div>
+                            ))}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1718,16 +1483,8 @@ const Products = () => {
                             name={[name, "rating"]}
                             label="Rating"
                             rules={[
-                              {
-                                required: true,
-                                message: "Please enter rating!",
-                              },
-                              {
-                                type: "number",
-                                min: 1,
-                                max: 5,
-                                message: "Rating must be between 1 and 5",
-                              },
+                              { required: true, message: "Please enter rating!" },
+                              { type: "number", min: 1, max: 5, message: "Rating must be between 1 and 5" },
                             ]}
                           >
                             <InputNumber
@@ -1778,20 +1535,12 @@ const Products = () => {
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item
-                  name="isBundle"
-                  label="Is Bundle"
-                  valuePropName="checked"
-                >
+                <Form.Item name="isBundle" label="Is Bundle" valuePropName="checked">
                   <Checkbox />
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item
-                  name="customizable"
-                  label="Customizable"
-                  valuePropName="checked"
-                >
+                <Form.Item name="customizable" label="Customizable" valuePropName="checked">
                   <Checkbox />
                 </Form.Item>
               </Col>
@@ -1811,254 +1560,6 @@ const Products = () => {
             <Form.Item name="seoDescription" label="SEO Description">
               <TextArea placeholder="Enter SEO description" />
             </Form.Item>
-
-            <Divider
-              orientation="left"
-              style={{ fontWeight: "bold", fontSize: "16px" }}
-            >
-              Product Specifications
-            </Divider>
-
-            <Form.List name="specifications">
-              {(fields, { add, remove }) => (
-                <>
-                  {fields.map(({ key, name, ...restField }) => (
-                    <div
-                      key={key}
-                      style={{
-                        marginBottom: 16,
-                        border: "1px solid #d9d9d9",
-                        padding: 16,
-                      }}
-                    >
-                      <Row gutter={16} justify="center">
-                        <Col span={24} style={{ marginBottom: 16 }}>
-                          <div
-                            style={{
-                              fontWeight: "bold",
-                              fontSize: 16,
-                              textAlign: "center",
-                            }}
-                          >
-                            Specification Image
-                          </div>
-                        </Col>
-                        <Col
-                          span={24}
-                          style={{ textAlign: "center", marginBottom: 16 }}
-                        >
-                          <Form.Item
-                            {...restField}
-                            name={[name, "image"]}
-                            valuePropName="fileList"
-                            getValueFromEvent={normFile}
-                            rules={[{ validator: validateImage }]}
-                          >
-                            <CloudinaryUploader
-                              cloudName={cloudName}
-                              uploadPreset={uploadPreset}
-                              listType="picture"
-                              maxCount={1}
-                              form={form}
-                              fieldName={`specifications[${name}].image`}
-                            >
-                              <Button icon={<UploadOutlined />}>
-                                Upload Image
-                              </Button>
-                            </CloudinaryUploader>
-                          </Form.Item>
-                        </Col>
-                      </Row>
-                      <Row gutter={16}>
-                        <Col span={8}>
-                          <Form.Item
-                            {...restField}
-                            name={[name, "title"]}
-                            rules={[
-                              {
-                                required: true,
-                                message: "Please enter title!",
-                              },
-                            ]}
-                          >
-                            <Input placeholder="Title" />
-                          </Form.Item>
-                        </Col>
-                        <Col span={14}>
-                          <Form.Item
-                            {...restField}
-                            name={[name, "description"]}
-                            rules={[
-                              {
-                                required: true,
-                                message: "Please enter description!",
-                              },
-                            ]}
-                          >
-                            <TextArea placeholder="Description" rows={4} />
-                          </Form.Item>
-                        </Col>
-                        <Col span={2}>
-                          <MinusCircleOutlined
-                            style={{ fontSize: 16, color: "red", marginTop: 8 }}
-                            onClick={() => remove(name)}
-                          />
-                        </Col>
-                      </Row>
-                    </div>
-                  ))}
-                  <Form.Item>
-                    <Button
-                      type="dashed"
-                      onClick={() => add()}
-                      block
-                      icon={<PlusOutlined />}
-                    >
-                      Add Specification
-                    </Button>
-                  </Form.Item>
-                </>
-              )}
-            </Form.List>
-
-            <Divider
-              orientation="left"
-              style={{ fontWeight: "bold", fontSize: "16px" }}
-            >
-              Details
-            </Divider>
-
-            <Form.List name="details">
-              {(fields, { add, remove }) => (
-                <>
-                  {fields.map(({ key, name, ...restField }) => (
-                    <div
-                      key={key}
-                      style={{
-                        marginBottom: 16,
-                        border: "1px solid #d9d9d9",
-                        padding: 16,
-                      }}
-                    >
-                      <Row gutter={16}>
-                        <Col span={22}>
-                          <Form.Item
-                            {...restField}
-                            name={[name, "title"]}
-                            rules={[
-                              {
-                                required: true,
-                                message: "Please enter title!",
-                              },
-                            ]}
-                          >
-                            <Input placeholder="Title" />
-                          </Form.Item>
-                        </Col>
-                        <Col span={2}>
-                          <MinusCircleOutlined
-                            style={{ fontSize: 16, color: "red", marginTop: 8 }}
-                            onClick={() => remove(name)}
-                          />
-                        </Col>
-                      </Row>
-                      <Row gutter={16}>
-                        <Col span={24}>
-                          <Form.Item {...restField} name={[name, "subtitle"]}>
-                            <Input placeholder="Subtitle" />
-                          </Form.Item>
-                        </Col>
-                      </Row>
-                      <Divider orientation="left">Descriptions</Divider>
-                      <Form.List name={[name, "descriptions"]}>
-                        {(descFields, { add: addDesc, remove: removeDesc }) => (
-                          <>
-                            {descFields.map((desc) => (
-                              <div
-                                key={desc.key}
-                                style={{
-                                  marginBottom: 16,
-                                  border: "1px solid #d9d9d9",
-                                  padding: 16,
-                                }}
-                              >
-                                <Row gutter={16}>
-                                  <Col span={22}>
-                                    <Form.Item
-                                      name={[desc.name, "text"]}
-                                      rules={[
-                                        {
-                                          required: true,
-                                          message: "Please enter description!",
-                                        },
-                                      ]}
-                                    >
-                                      <ReactQuill theme="snow" />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={2}>
-                                    <MinusCircleOutlined
-                                      style={{
-                                        fontSize: 16,
-                                        color: "red",
-                                        marginTop: 8,
-                                      }}
-                                      onClick={() => removeDesc(desc.name)}
-                                    />
-                                  </Col>
-                                </Row>
-                                <Row gutter={16}>
-                                  <Col span={24}>
-                                    <Form.Item
-                                      name={[desc.name, "image"]}
-                                      valuePropName="fileList"
-                                      getValueFromEvent={normFile}
-                                    >
-                                      <CloudinaryUploader
-                                        cloudName={cloudName}
-                                        uploadPreset={uploadPreset}
-                                        listType="picture"
-                                        maxCount={1}
-                                        form={form}
-                                        fieldName={`details[${name}].descriptions[${desc.name}].image`}
-                                      >
-                                        <Button icon={<UploadOutlined />}>
-                                          Upload Image
-                                        </Button>
-                                      </CloudinaryUploader>
-                                    </Form.Item>
-                                  </Col>
-                                </Row>
-                              </div>
-                            ))}
-                            <Form.Item>
-                              <Button
-                                type="dashed"
-                                onClick={() => addDesc()}
-                                block
-                                icon={<PlusOutlined />}
-                              >
-                                Add Description
-                              </Button>
-                            </Form.Item>
-                          </>
-                        )}
-                      </Form.List>
-                    </div>
-                  ))}
-                  <Form.Item>
-                    <Button
-                      type="dashed"
-                      onClick={() => add()}
-                      block
-                      icon={<PlusOutlined />}
-                    >
-                      Add Detail
-                    </Button>
-                  </Form.Item>
-                </>
-              )}
-            </Form.List>
           </Form>
         </Modal>
       </Spin>
