@@ -1,9 +1,8 @@
-import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "../login/login";
 import Signup from "../login/signup";
 import AdminPortal from "../sider";
-import ProtectedRoute from "./protectedroute"; // Import ProtectedRoute
+import ProtectedRoute from "./protectedroute"; 
 
 const AppRoutes = () => {
   return (

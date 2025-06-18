@@ -1,9 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, Modal, Form, Input, message } from "antd";
-import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  message
+} from "antd";
+import {
+  EditOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  PlusOutlined
+} from "@ant-design/icons";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { aboutus } from '../utils/axios';  // tumhara axios instance
+import { aboutus } from "../utils/axios";
 
 const About = () => {
   const [data, setData] = useState([]);
@@ -12,6 +24,8 @@ const About = () => {
   const [currentMode, setCurrentMode] = useState("add");
   const [currentRecord, setCurrentRecord] = useState(null);
   const [items, setItems] = useState([{ title: "", description: "" }]);
+  const [seoTitle, setSeoTitle] = useState("");
+  const [seoDescription, setSeoDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
 
@@ -63,6 +77,8 @@ const About = () => {
   const handleAddClick = () => {
     setCurrentMode("add");
     setItems([{ title: "", description: "" }]);
+    setSeoTitle("");
+    setSeoDescription("");
     form.resetFields();
     setIsModalVisible(true);
   };
@@ -74,6 +90,8 @@ const About = () => {
       description: record.description?.[idx] || ""
     }));
     setItems(recordItems);
+    setSeoTitle(record.seoTitle || "");
+    setSeoDescription(record.seoDescription || "");
     setIsViewModalVisible(true);
   };
 
@@ -85,7 +103,13 @@ const About = () => {
       description: record.description?.[idx] || ""
     }));
     setItems(recordItems);
-    form.setFieldsValue({ items: recordItems });
+    setSeoTitle(record.seoTitle || "");
+    setSeoDescription(record.seoDescription || "");
+    form.setFieldsValue({
+      items: recordItems,
+      seoTitle: record.seoTitle,
+      seoDescription: record.seoDescription
+    });
     setIsModalVisible(true);
   };
 
@@ -119,7 +143,9 @@ const About = () => {
 
       const payload = {
         title: titles,
-        description: descriptions
+        description: descriptions,
+        seoTitle,
+        seoDescription
       };
 
       if (currentMode === "edit" && currentRecord) {
@@ -173,16 +199,15 @@ const About = () => {
       ),
     },
     {
-      title: "Description Preview",
-      dataIndex: "description",
-      key: "description",
-      render: (desc) => (
-        <div
-          dangerouslySetInnerHTML={{
-            __html: (desc?.[0] || "").slice(0, 100) + "...",
-          }}
-        />
-      ),
+      title: "SEO Title",
+      dataIndex: "seoTitle",
+      key: "seoTitle",
+    },
+    {
+      title: "SEO Description",
+      dataIndex: "seoDescription",
+      key: "seoDescription",
+      render: (text) => <span>{text?.slice(0, 60)}...</span>,
     },
     {
       title: "Actions",
@@ -217,7 +242,7 @@ const About = () => {
         bordered
       />
 
-      {/* Modal for Add/Edit */}
+      {/* Add/Edit Modal */}
       <Modal
         title={currentMode === "edit" ? "Edit About Us" : "Add About Us"}
         open={isModalVisible}
@@ -229,6 +254,31 @@ const About = () => {
         destroyOnClose
       >
         <Form form={form} layout="vertical">
+          <Form.Item
+            label="SEO Title"
+            name="seoTitle"
+            rules={[{ required: true, message: "SEO Title is required" }]}
+          >
+            <Input
+              placeholder="Enter SEO Title"
+              value={seoTitle}
+              onChange={(e) => setSeoTitle(e.target.value)}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="SEO Description"
+            name="seoDescription"
+            rules={[{ required: true, message: "SEO Description is required" }]}
+          >
+            <Input.TextArea
+              rows={3}
+              placeholder="Enter SEO Description"
+              value={seoDescription}
+              onChange={(e) => setSeoDescription(e.target.value)}
+            />
+          </Form.Item>
+
           {items.map((item, index) => (
             <div key={index} style={{ marginBottom: 32, borderBottom: '1px solid #ddd', paddingBottom: 16 }}>
               <Form.Item
@@ -271,6 +321,8 @@ const About = () => {
         footer={<Button onClick={() => setIsViewModalVisible(false)}>Close</Button>}
         width="80%"
       >
+        <p><strong>SEO Title:</strong> {seoTitle}</p>
+        <p><strong>SEO Description:</strong> {seoDescription}</p>
         {items.map((item, index) => (
           <div key={index} style={{ marginBottom: 32 }}>
             <h3>{item.title}</h3>

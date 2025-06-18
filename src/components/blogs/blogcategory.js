@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Table, Button, Modal, Input, message, Spin } from 'antd';
-import { blogcategorys } from '../../utils/axios'; 
+import { blogcategorys } from '../../utils/axios';
 
 const Blogcategory = () => {
   const [blogCategories, setBlogCategories] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [newCategoryTitle, setNewCategoryTitle] = useState('');
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [tableLoading, setTableLoading] = useState(false);
 
@@ -16,9 +18,8 @@ const Blogcategory = () => {
   const fetchBlogCategories = async () => {
     setTableLoading(true);
     try {
-      const response = await blogcategorys.get("/");
+      const response = await blogcategorys.get('/');
       const categoriesData = response.data?.data || [];
-      
       setBlogCategories(categoriesData);
     } catch (error) {
       console.error('Fetch error:', error);
@@ -35,6 +36,8 @@ const Blogcategory = () => {
   const handleCancel = () => {
     setIsModalVisible(false);
     setNewCategoryTitle('');
+    setSeoTitle('');
+    setSeoDescription('');
   };
 
   const handleAddCategory = async () => {
@@ -45,15 +48,18 @@ const Blogcategory = () => {
 
     setLoading(true);
     try {
-      const response = await blogcategorys.post("/", { name: newCategoryTitle });
-      
+      const response = await blogcategorys.post('/', {
+        name: newCategoryTitle,
+        seoTitle,
+        seoDescription,
+      });
+
       if (!response.data?.data) {
         throw new Error('No data returned from API');
       }
-      
+
       message.success('Category added successfully!');
-      setIsModalVisible(false);
-      setNewCategoryTitle('');
+      handleCancel();
       fetchBlogCategories(); // Refresh the list
     } catch (error) {
       console.error('Add category error:', error);
@@ -68,7 +74,7 @@ const Blogcategory = () => {
     try {
       await blogcategorys.delete(`/${id}`);
       message.success('Category deleted successfully!');
-      fetchBlogCategories(); // Refresh the list
+      fetchBlogCategories();
     } catch (error) {
       console.error('Delete error:', error);
       message.error('Failed to delete category');
@@ -90,12 +96,25 @@ const Blogcategory = () => {
       key: 'name',
     },
     {
+      title: 'SEO Title',
+      dataIndex: 'seoTitle',
+      key: 'seoTitle',
+    },
+    {
+      title: 'SEO Description',
+      dataIndex: 'seoDescription',
+      key: 'seoDescription',
+      render: (text) => (
+        <span>{text?.length > 50 ? `${text.slice(0, 50)}...` : text}</span>
+      ),
+    },
+    {
       title: 'Actions',
       key: 'actions',
       width: 120,
       render: (_, record) => (
-        <Button 
-          danger 
+        <Button
+          danger
           onClick={() => handleDelete(record._id)}
           loading={loading}
         >
@@ -107,9 +126,9 @@ const Blogcategory = () => {
 
   return (
     <div>
-      <Button 
-        style={{ marginTop: '1rem', marginBottom: '1rem' }} 
-        type="primary" 
+      <Button
+        style={{ marginTop: '1rem', marginBottom: '1rem' }}
+        type="primary"
         onClick={showModal}
       >
         Create Blog Category
@@ -123,7 +142,7 @@ const Blogcategory = () => {
           pagination={{ pageSize: 10 }}
           style={{ marginTop: 20 }}
           locale={{
-            emptyText: 'No categories found'
+            emptyText: 'No categories found',
           }}
         />
       </Spin>
@@ -139,14 +158,26 @@ const Blogcategory = () => {
           placeholder="Enter Category Title"
           value={newCategoryTitle}
           onChange={(e) => setNewCategoryTitle(e.target.value)}
-          onPressEnter={handleAddCategory}
+          style={{ marginBottom: 12 }}
+        />
+        <Input
+          placeholder="Enter SEO Title"
+          value={seoTitle}
+          onChange={(e) => setSeoTitle(e.target.value)}
+          style={{ marginBottom: 12 }}
+        />
+        <Input.TextArea
+          placeholder="Enter SEO Description"
+          value={seoDescription}
+          onChange={(e) => setSeoDescription(e.target.value)}
+          rows={3}
         />
         <div style={{ marginTop: 20, textAlign: 'right' }}>
           <Button onClick={handleCancel} style={{ marginRight: 10 }}>
             Cancel
           </Button>
-          <Button 
-            type="primary" 
+          <Button
+            type="primary"
             onClick={handleAddCategory}
             loading={loading}
           >

@@ -232,6 +232,8 @@ const Products = () => {
         variantDescription: variant.variantDescription,
         price: variant.price,
         salePrice: variant.salePrice,
+        seoTitle: variant.seoTitle,
+        seoDescription: variant.seoDescription,
         dimensions: {
           length: variant.dimensions?.length || 0,
           width: variant.dimensions?.width || 0,
@@ -279,7 +281,8 @@ const Products = () => {
       image: values.mainImage?.[0]?.url || "https://via.placeholder.com/100",
       pdfImage: values.pdfImage?.[0]?.url || undefined,
       additionalImages:
-        values.additionalImages?.map((img) => img.url).filter((url) => url) || [],
+        values.additionalImages?.map((img) => img.url).filter((url) => url) ||
+        [],
       shipping: values.shippingCountry
         ? [
             {
@@ -306,6 +309,7 @@ const Products = () => {
       seoDescription: values.seoDescription,
       identifierExists: values.identifierExists,
       averageRating: values.averageRating,
+      schemaName: values.schemaName,
       reviews:
         values.reviews?.map((review) => ({
           rating: review.rating,
@@ -365,7 +369,9 @@ const Products = () => {
               status: "done",
               url: record.pdfImage,
               thumbUrl: record.pdfImage,
-               type: record.pdfImage.includes('.mp4') ? 'video/mp4' : 'image/jpeg',
+              type: record.pdfImage.includes(".mp4")
+                ? "video/mp4"
+                : "image/jpeg",
             },
           ]
         : [],
@@ -376,65 +382,72 @@ const Products = () => {
           status: "done",
           url,
           thumbUrl: url,
-        type: url.includes('.mp4') ? 'video/mp4' : 'image/jpeg',
+          type: url.includes(".mp4") ? "video/mp4" : "image/jpeg",
         })) || [],
       salePriceEffectiveDate,
-      variants: record.variants?.map((variant, variantIndex) => ({
-        ...variant,
-        dimensions: {
-          length: variant.dimensions?.length || 0,
-          width: variant.dimensions?.width || 0,
-          height: variant.dimensions?.height || 0,
-          unit: variant.dimensions?.unit || "in",
-        },
-        variantDetail: {
-          material: variant.variantDetail?.material || [],
-          colormodel: variant.variantDetail?.colormodel || [],
-          finishing: variant.variantDetail?.finishing || [],
-          addon: variant.variantDetail?.addon || [],
-          turnaround: variant.variantDetail?.turnaround || [],
-          faqs: variant.variantDetail?.faqs || [],
-        },
-        variantSpecifications:
-          variant.variantSpecifications?.map((spec, specIndex) => ({
-            ...spec,
-            image: spec.image
-              ? [
-                  {
-                    uid: `spec-${variantIndex}-${specIndex}`,
-                    name: `spec-image-${specIndex}.png`,
-                    status: "done",
-                    url: spec.image,
-                    thumbUrl: spec.image,
-                    type: "image/jpeg",
-                  },
-                ]
-              : [],
-          })) || [],
-        detailDescription:
-          variant.detailDescription?.map((desc, descIndex) => ({
-            description: desc.description || "",
-            image: desc.image
-              ? [
-                  {
-                    uid: `desc-${variantIndex}-${descIndex}`,
-                    name: `desc-image-${descIndex}.png`,
-                    status: "done",
-                    url: desc.image,
-                    thumbUrl: desc.image,
-                    type: "image/jpeg",
-                  },
-                ]
-              : [],
-          })) || [],
-      })) || [],
+      schemaName: record.schemaName,
+      variants:
+        record.variants?.map((variant, variantIndex) => ({
+          ...variant,
+          seoTitle: variant.seoTitle,
+          seoDescription: variant.seoDescription,
+          dimensions: {
+            length: variant.dimensions?.length || 0,
+            width: variant.dimensions?.width || 0,
+            height: variant.dimensions?.height || 0,
+            unit: variant.dimensions?.unit || "in",
+          },
+          variantDetail: {
+            material: variant.variantDetail?.material || [],
+            colormodel: variant.variantDetail?.colormodel || [],
+            finishing: variant.variantDetail?.finishing || [],
+            addon: variant.variantDetail?.addon || [],
+            turnaround: variant.variantDetail?.turnaround || [],
+            faqs: variant.variantDetail?.faqs || [],
+          },
+          variantSpecifications:
+            variant.variantSpecifications?.map((spec, specIndex) => ({
+              ...spec,
+              image: spec.image
+                ? [
+                    {
+                      uid: `spec-${variantIndex}-${specIndex}`,
+                      name: `spec-image-${specIndex}.png`,
+                      status: "done",
+                      url: spec.image,
+                      thumbUrl: spec.image,
+                      type: "image/jpeg",
+                    },
+                  ]
+                : [],
+            })) || [],
+          detailDescription:
+            variant.detailDescription?.map((desc, descIndex) => ({
+              description: desc.description || "",
+              image: desc.image
+                ? [
+                    {
+                      uid: `desc-${variantIndex}-${descIndex}`,
+                      name: `desc-image-${descIndex}.png`,
+                      status: "done",
+                      url: desc.image,
+                      thumbUrl: desc.image,
+                      type: "image/jpeg",
+                    },
+                  ]
+                : [],
+            })) || [],
+        })) || [],
       reviews:
         record.reviews?.map((review) => ({
           rating: review.rating,
         })) || [],
     };
 
-    console.log("Setting form data for edit:", JSON.stringify(formattedData, null, 2));
+    console.log(
+      "Setting form data for edit:",
+      JSON.stringify(formattedData, null, 2)
+    );
     form.setFieldsValue(formattedData);
   };
 
@@ -477,7 +490,11 @@ const Products = () => {
   };
 
   const validateImage = (_, value) => {
-    if (!value || value.length === 0 || !value.some((file) => file.status === "done")) {
+    if (
+      !value ||
+      value.length === 0 ||
+      !value.some((file) => file.status === "done")
+    ) {
       return Promise.reject(new Error("Please upload an image!"));
     }
     return Promise.resolve();
@@ -564,7 +581,9 @@ const Products = () => {
             <Form.Item
               name="title"
               label="Product Title"
-              rules={[{ required: true, message: "Please input product title!" }]}
+              rules={[
+                { required: true, message: "Please input product title!" },
+              ]}
             >
               <Input placeholder="Enter product title" />
             </Form.Item>
@@ -585,7 +604,12 @@ const Products = () => {
                 <Form.Item
                   name="categories"
                   label="Categories"
-                  rules={[{ required: true, message: "Please select at least one category!" }]}
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please select at least one category!",
+                    },
+                  ]}
                 >
                   <Select
                     mode="multiple"
@@ -618,7 +642,12 @@ const Products = () => {
                 <Form.Item
                   name="subcategories"
                   label="Subcategories"
-                  rules={[{ required: true, message: "Please select at least one subcategory!" }]}
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please select at least one subcategory!",
+                    },
+                  ]}
                 >
                   <Select
                     mode="multiple"
@@ -671,7 +700,10 @@ const Products = () => {
                 listType="picture-card"
                 maxCount={1}
                 onUploadSuccess={(fileList) => {
-                  console.log("Main Image uploaded:", JSON.stringify(fileList, null, 2));
+                  console.log(
+                    "Main Image uploaded:",
+                    JSON.stringify(fileList, null, 2)
+                  );
                   form.setFieldValue("mainImage", fileList);
                 }}
                 fileList={form.getFieldValue("mainImage") || []}
@@ -680,7 +712,7 @@ const Products = () => {
 
             <Form.Item
               name="pdfImage"
-              label="PDF Image"
+              label="PDF Image for Dieline"
               valuePropName="fileList"
               getValueFromEvent={normFile}
             >
@@ -690,7 +722,10 @@ const Products = () => {
                 listType="picture-card"
                 maxCount={1}
                 onUploadSuccess={(fileList) => {
-                  console.log("PDF Image uploaded:", JSON.stringify(fileList, null, 2));
+                  console.log(
+                    "PDF Image uploaded:",
+                    JSON.stringify(fileList, null, 2)
+                  );
                   form.setFieldValue("pdfImage", fileList);
                 }}
                 fileList={form.getFieldValue("pdfImage") || []}
@@ -699,7 +734,7 @@ const Products = () => {
 
             <Form.Item
               name="additionalImages"
-              label="Additional Images"
+              label="Additional Images for product variants"
               valuePropName="fileList"
               getValueFromEvent={normFile}
             >
@@ -709,7 +744,10 @@ const Products = () => {
                 listType="picture-card"
                 maxCount={10}
                 onUploadSuccess={(fileList) => {
-                  console.log("Additional Images uploaded:", JSON.stringify(fileList, null, 2));
+                  console.log(
+                    "Additional Images uploaded:",
+                    JSON.stringify(fileList, null, 2)
+                  );
                   form.setFieldValue("additionalImages", fileList);
                 }}
                 fileList={form.getFieldValue("additionalImages") || []}
@@ -908,7 +946,12 @@ const Products = () => {
                             {...restField}
                             name={[name, "variantTitle"]}
                             label="Variant Title"
-                            rules={[{ required: true, message: "Missing variant title" }]}
+                            rules={[
+                              {
+                                required: true,
+                                message: "Missing variant title",
+                              },
+                            ]}
                           >
                             <Input placeholder="e.g., Large Box" />
                           </Form.Item>
@@ -1013,28 +1056,35 @@ const Products = () => {
                       <Form.List name={[name, "variantDetail", "material"]}>
                         {(fields, { add, remove }) => (
                           <>
-                            {fields.map(({ key, name: fieldName, ...restField }) => (
-                              <Row key={key} gutter={16}>
-                                <Col span={22}>
-                                  <Form.Item
-                                    {...restField}
-                                    name={fieldName}
-                                    rules={[{ required: true, message: "Enter material" }]}
-                                  >
-                                    <Input placeholder="e.g., Kraft Paper" />
-                                  </Form.Item>
-                                </Col>
-                                <Col span={2}>
-                                  <Button
-                                    type="link"
-                                    danger
-                                    onClick={() => remove(fieldName)}
-                                  >
-                                    Remove
-                                  </Button>
-                                </Col>
-                              </Row>
-                            ))}
+                            {fields.map(
+                              ({ key, name: fieldName, ...restField }) => (
+                                <Row key={key} gutter={16}>
+                                  <Col span={22}>
+                                    <Form.Item
+                                      {...restField}
+                                      name={fieldName}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message: "Enter material",
+                                        },
+                                      ]}
+                                    >
+                                      <Input placeholder="e.g., Kraft Paper" />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={2}>
+                                    <Button
+                                      type="link"
+                                      danger
+                                      onClick={() => remove(fieldName)}
+                                    >
+                                      Remove
+                                    </Button>
+                                  </Col>
+                                </Row>
+                              )
+                            )}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1053,28 +1103,35 @@ const Products = () => {
                       <Form.List name={[name, "variantDetail", "colormodel"]}>
                         {(fields, { add, remove }) => (
                           <>
-                            {fields.map(({ key, name: fieldName, ...restField }) => (
-                              <Row key={key} gutter={16}>
-                                <Col span={22}>
-                                  <Form.Item
-                                    {...restField}
-                                    name={fieldName}
-                                    rules={[{ required: true, message: "Enter color model" }]}
-                                  >
-                                    <Input placeholder="e.g., CMYK" />
-                                  </Form.Item>
-                                </Col>
-                                <Col span={2}>
-                                  <Button
-                                    type="link"
-                                    danger
-                                    onClick={() => remove(fieldName)}
-                                  >
-                                    Remove
-                                  </Button>
-                                </Col>
-                              </Row>
-                            ))}
+                            {fields.map(
+                              ({ key, name: fieldName, ...restField }) => (
+                                <Row key={key} gutter={16}>
+                                  <Col span={22}>
+                                    <Form.Item
+                                      {...restField}
+                                      name={fieldName}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message: "Enter color model",
+                                        },
+                                      ]}
+                                    >
+                                      <Input placeholder="e.g., CMYK" />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={2}>
+                                    <Button
+                                      type="link"
+                                      danger
+                                      onClick={() => remove(fieldName)}
+                                    >
+                                      Remove
+                                    </Button>
+                                  </Col>
+                                </Row>
+                              )
+                            )}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1093,28 +1150,35 @@ const Products = () => {
                       <Form.List name={[name, "variantDetail", "finishing"]}>
                         {(fields, { add, remove }) => (
                           <>
-                            {fields.map(({ key, name: fieldName, ...restField }) => (
-                              <Row key={key} gutter={16}>
-                                <Col span={22}>
-                                  <Form.Item
-                                    {...restField}
-                                    name={fieldName}
-                                    rules={[{ required: true, message: "Enter finishing" }]}
-                                  >
-                                    <Input placeholder="e.g., Glossy" />
-                                  </Form.Item>
-                                </Col>
-                                <Col span={2}>
-                                  <Button
-                                    type="link"
-                                    danger
-                                    onClick={() => remove(fieldName)}
-                                  >
-                                    Remove
-                                  </Button>
-                                </Col>
-                              </Row>
-                            ))}
+                            {fields.map(
+                              ({ key, name: fieldName, ...restField }) => (
+                                <Row key={key} gutter={16}>
+                                  <Col span={22}>
+                                    <Form.Item
+                                      {...restField}
+                                      name={fieldName}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message: "Enter finishing",
+                                        },
+                                      ]}
+                                    >
+                                      <Input placeholder="e.g., Glossy" />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={2}>
+                                    <Button
+                                      type="link"
+                                      danger
+                                      onClick={() => remove(fieldName)}
+                                    >
+                                      Remove
+                                    </Button>
+                                  </Col>
+                                </Row>
+                              )
+                            )}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1133,24 +1197,26 @@ const Products = () => {
                       <Form.List name={[name, "variantDetail", "addon"]}>
                         {(fields, { add, remove }) => (
                           <>
-                            {fields.map(({ key, name: fieldName, ...restField }) => (
-                              <Row key={key} gutter={16}>
-                                <Col span={22}>
-                                  <Form.Item {...restField} name={fieldName}>
-                                    <Input placeholder="e.g., Handle Cutouts" />
-                                  </Form.Item>
-                                </Col>
-                                <Col span={2}>
-                                  <Button
-                                    type="link"
-                                    danger
-                                    onClick={() => remove(fieldName)}
-                                  >
-                                    Remove
-                                  </Button>
-                                </Col>
-                              </Row>
-                            ))}
+                            {fields.map(
+                              ({ key, name: fieldName, ...restField }) => (
+                                <Row key={key} gutter={16}>
+                                  <Col span={22}>
+                                    <Form.Item {...restField} name={fieldName}>
+                                      <Input placeholder="e.g., Handle Cutouts" />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={2}>
+                                    <Button
+                                      type="link"
+                                      danger
+                                      onClick={() => remove(fieldName)}
+                                    >
+                                      Remove
+                                    </Button>
+                                  </Col>
+                                </Row>
+                              )
+                            )}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1169,28 +1235,35 @@ const Products = () => {
                       <Form.List name={[name, "variantDetail", "turnaround"]}>
                         {(fields, { add, remove }) => (
                           <>
-                            {fields.map(({ key, name: fieldName, ...restField }) => (
-                              <Row key={key} gutter={16}>
-                                <Col span={22}>
-                                  <Form.Item
-                                    {...restField}
-                                    name={fieldName}
-                                    rules={[{ required: true, message: "Enter turnaround" }]}
-                                  >
-                                    <Input placeholder="e.g., 5 Days" />
-                                  </Form.Item>
-                                </Col>
-                                <Col span={2}>
-                                  <Button
-                                    type="link"
-                                    danger
-                                    onClick={() => remove(fieldName)}
-                                  >
-                                    Remove
-                                  </Button>
-                                </Col>
-                              </Row>
-                            ))}
+                            {fields.map(
+                              ({ key, name: fieldName, ...restField }) => (
+                                <Row key={key} gutter={16}>
+                                  <Col span={22}>
+                                    <Form.Item
+                                      {...restField}
+                                      name={fieldName}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message: "Enter turnaround",
+                                        },
+                                      ]}
+                                    >
+                                      <Input placeholder="e.g., 5 Days" />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={2}>
+                                    <Button
+                                      type="link"
+                                      danger
+                                      onClick={() => remove(fieldName)}
+                                    >
+                                      Remove
+                                    </Button>
+                                  </Col>
+                                </Row>
+                              )
+                            )}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1209,39 +1282,51 @@ const Products = () => {
                       <Form.List name={[name, "variantDetail", "faqs"]}>
                         {(fields, { add, remove }) => (
                           <>
-                            {fields.map(({ key, name: fieldName, ...restField }) => (
-                              <div key={key} style={{ marginBottom: 8 }}>
-                                <Row gutter={16}>
-                                  <Col span={11}>
-                                    <Form.Item
-                                      {...restField}
-                                      name={[fieldName, "question"]}
-                                      rules={[{ required: true, message: "Enter question" }]}
-                                    >
-                                      <Input placeholder="Question" />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={11}>
-                                    <Form.Item
-                                      {...restField}
-                                      name={[fieldName, "answer"]}
-                                      rules={[{ required: true, message: "Enter answer" }]}
-                                    >
-                                      <Input placeholder="Answer" />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={2}>
-                                    <Button
-                                      type="link"
-                                      danger
-                                      onClick={() => remove(fieldName)}
-                                    >
-                                      Remove
-                                    </Button>
-                                  </Col>
-                                </Row>
-                              </div>
-                            ))}
+                            {fields.map(
+                              ({ key, name: fieldName, ...restField }) => (
+                                <div key={key} style={{ marginBottom: 8 }}>
+                                  <Row gutter={16}>
+                                    <Col span={11}>
+                                      <Form.Item
+                                        {...restField}
+                                        name={[fieldName, "question"]}
+                                        rules={[
+                                          {
+                                            required: true,
+                                            message: "Enter question",
+                                          },
+                                        ]}
+                                      >
+                                        <Input placeholder="Question" />
+                                      </Form.Item>
+                                    </Col>
+                                    <Col span={11}>
+                                      <Form.Item
+                                        {...restField}
+                                        name={[fieldName, "answer"]}
+                                        rules={[
+                                          {
+                                            required: true,
+                                            message: "Enter answer",
+                                          },
+                                        ]}
+                                      >
+                                        <Input placeholder="Answer" />
+                                      </Form.Item>
+                                    </Col>
+                                    <Col span={2}>
+                                      <Button
+                                        type="link"
+                                        danger
+                                        onClick={() => remove(fieldName)}
+                                      >
+                                        Remove
+                                      </Button>
+                                    </Col>
+                                  </Row>
+                                </div>
+                              )
+                            )}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1256,90 +1341,130 @@ const Products = () => {
                         )}
                       </Form.List>
 
-                      <Divider orientation="left">Variant Specifications</Divider>
+                      <Divider orientation="left">
+                        Variant Specifications
+                      </Divider>
                       <Form.List name={[name, "variantSpecifications"]}>
                         {(fields, { add, remove }) => (
                           <>
-                            {fields.map(({ key, name: fieldName, ...restField }) => (
-                              <div
-                                key={key}
-                                style={{
-                                  marginBottom: 16,
-                                  border: "1px solid #d9d9d9",
-                                  padding: 16,
-                                  borderRadius: 4,
-                                }}
-                              >
-                                <Row gutter={16} justify="center">
-                                  <Col span={24} style={{ marginBottom: 16 }}>
-                                    <div
+                            {fields.map(
+                              ({ key, name: fieldName, ...restField }) => (
+                                <div
+                                  key={key}
+                                  style={{
+                                    marginBottom: 16,
+                                    border: "1px solid #d9d9d9",
+                                    padding: 16,
+                                    borderRadius: 4,
+                                  }}
+                                >
+                                  <Row gutter={16} justify="center">
+                                    <Col span={24} style={{ marginBottom: 16 }}>
+                                      <div
+                                        style={{
+                                          fontWeight: "bold",
+                                          fontSize: 16,
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        Specification Image
+                                      </div>
+                                    </Col>
+                                    <Col
+                                      span={24}
                                       style={{
-                                        fontWeight: "bold",
-                                        fontSize: 16,
                                         textAlign: "center",
+                                        marginBottom: 16,
                                       }}
                                     >
-                                      Specification Image
-                                    </div>
-                                  </Col>
-                                  <Col span={24} style={{ textAlign: "center", marginBottom: 16 }}>
-                                    <Form.Item
-                                      {...restField}
-                                      name={[fieldName, "image"]}
-                                      valuePropName="fileList"
-                                      getValueFromEvent={normFile}
-                                      rules={[{ validator: validateImage }]}
-                                    >
-                                      <CloudinaryUploader
-                                        cloudName={cloudName}
-                                        uploadPreset={uploadPreset}
-                                        listType="picture-card"
-                                        maxCount={1}
-                                        onUploadSuccess={(fileList) => {
-                                          console.log(`Variant Spec Image uploaded [${name}][${fieldName}]:`, JSON.stringify(fileList, null, 2));
-                                          form.setFieldValue(["variants", name, "variantSpecifications", fieldName, "image"], fileList);
-                                        }}
-                                        fileList={form.getFieldValue(["variants", name, "variantSpecifications", fieldName, "image"]) || []}
-                                      />
-                                    </Form.Item>
-                                  </Col>
-                                </Row>
+                                      <Form.Item
+                                        {...restField}
+                                        name={[fieldName, "image"]}
+                                        valuePropName="fileList"
+                                        getValueFromEvent={normFile}
+                                        rules={[{ validator: validateImage }]}
+                                      >
+                                        <CloudinaryUploader
+                                          cloudName={cloudName}
+                                          uploadPreset={uploadPreset}
+                                          listType="picture-card"
+                                          maxCount={1}
+                                          onUploadSuccess={(fileList) => {
+                                            console.log(
+                                              `Variant Spec Image uploaded [${name}][${fieldName}]:`,
+                                              JSON.stringify(fileList, null, 2)
+                                            );
+                                            form.setFieldValue(
+                                              [
+                                                "variants",
+                                                name,
+                                                "variantSpecifications",
+                                                fieldName,
+                                                "image",
+                                              ],
+                                              fileList
+                                            );
+                                          }}
+                                          fileList={
+                                            form.getFieldValue([
+                                              "variants",
+                                              name,
+                                              "variantSpecifications",
+                                              fieldName,
+                                              "image",
+                                            ]) || []
+                                          }
+                                        />
+                                      </Form.Item>
+                                    </Col>
+                                  </Row>
 
-                                <Row gutter={16} align="middle">
-                                  <Col span={8}>
-                                    <Form.Item
-                                      {...restField}
-                                      name={[fieldName, "title"]}
-                                      rules={[{ required: true, message: "Enter title" }]}
-                                    >
-                                      <Input placeholder="Title" />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={14}>
-                                    <Form.Item
-                                      {...restField}
-                                      name={[fieldName, "description"]}
-                                      rules={[{ required: true, message: "Enter description" }]}
-                                    >
-                                      <TextArea
-                                        placeholder="Description"
-                                        rows={4}
-                                        style={{ resize: "vertical" }}
-                                      />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={2}>
-                                    <Button
-                                      type="link"
-                                      danger
-                                      onClick={() => remove(fieldName)}
-                                    >
-                                      Remove
-                                    </Button>
-                                  </Col>
-                                </Row>
-                              </div>
-                            ))}
+                                  <Row gutter={16} align="middle">
+                                    <Col span={8}>
+                                      <Form.Item
+                                        {...restField}
+                                        name={[fieldName, "title"]}
+                                        rules={[
+                                          {
+                                            required: true,
+                                            message: "Enter title",
+                                          },
+                                        ]}
+                                      >
+                                        <Input placeholder="Title" />
+                                      </Form.Item>
+                                    </Col>
+                                    <Col span={14}>
+                                      <Form.Item
+                                        {...restField}
+                                        name={[fieldName, "description"]}
+                                        rules={[
+                                          {
+                                            required: true,
+                                            message: "Enter description",
+                                          },
+                                        ]}
+                                      >
+                                        <TextArea
+                                          placeholder="Description"
+                                          rows={4}
+                                          style={{ resize: "vertical" }}
+                                        />
+                                      </Form.Item>
+                                    </Col>
+                                    <Col span={2}>
+                                      <Button
+                                        type="link"
+                                        danger
+                                        onClick={() => remove(fieldName)}
+                                      >
+                                        Remove
+                                      </Button>
+                                    </Col>
+                                  </Row>
+                                </div>
+                              )
+                            )}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1358,68 +1483,120 @@ const Products = () => {
                       <Form.List name={[name, "detailDescription"]}>
                         {(descFields, { add: addDesc, remove: removeDesc }) => (
                           <>
-                            {descFields.map(({ key: descKey, name: descName, ...descRestField }) => (
-                              <div
-                                key={descKey}
-                                style={{
-                                  marginBottom: 16,
-                                  border: "1px solid #d9d9d9",
-                                  padding: 16,
-                                  borderRadius: 4,
-                                }}
-                              >
-                                <Row gutter={16}>
-                                  <Col span={22}>
-                                    <Form.Item
-                                      {...descRestField}
-                                      name={[descName, "description"]}
-                                      rules={[{ required: true, message: "Please enter description!" }]}
-                                    >
-                                      <ReactQuill
-                                        theme="snow"
-                                        modules={modules}
-                                        onChange={(value) => {
-                                          console.log(`Detail Description updated [${name}][${descName}]:`, value);
-                                          form.setFieldValue(["variants", name, "detailDescription", descName, "description"], value);
-                                        }}
-                                        value={form.getFieldValue(["variants", name, "detailDescription", descName, "description"]) || ""}
-                                      />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={2}>
-                                    <Button
-                                      type="link"
-                                      danger
-                                      onClick={() => removeDesc(descName)}
-                                    >
-                                      Remove
-                                    </Button>
-                                  </Col>
-                                </Row>
-                                <Row gutter={16}>
-                                  <Col span={24}>
-                                    <Form.Item
-                                      {...descRestField}
-                                      name={[descName, "image"]}
-                                      valuePropName="fileList"
-                                      getValueFromEvent={normFile}
-                                    >
-                                      <CloudinaryUploader
-                                        cloudName={cloudName}
-                                        uploadPreset={uploadPreset}
-                                        listType="picture-card"
-                                        maxCount={1}
-                                        onUploadSuccess={(fileList) => {
-                                          console.log(`Detail Desc Image uploaded [${name}][${descName}]:`, JSON.stringify(fileList, null, 2));
-                                          form.setFieldValue(["variants", name, "detailDescription", descName, "image"], fileList);
-                                        }}
-                                        fileList={form.getFieldValue(["variants", name, "detailDescription", descName, "image"]) || []}
-                                      />
-                                    </Form.Item>
-                                  </Col>
-                                </Row>
-                              </div>
-                            ))}
+                            {descFields.map(
+                              ({
+                                key: descKey,
+                                name: descName,
+                                ...descRestField
+                              }) => (
+                                <div
+                                  key={descKey}
+                                  style={{
+                                    marginBottom: 16,
+                                    border: "1px solid #d9d9d9",
+                                    padding: 16,
+                                    borderRadius: 4,
+                                  }}
+                                >
+                                  <Row gutter={16}>
+                                    <Col span={22}>
+                                      <Form.Item
+                                        {...descRestField}
+                                        name={[descName, "description"]}
+                                        rules={[
+                                          {
+                                            required: true,
+                                            message:
+                                              "Please enter description!",
+                                          },
+                                        ]}
+                                      >
+                                        <ReactQuill
+                                          theme="snow"
+                                          modules={modules}
+                                          onChange={(value) => {
+                                            console.log(
+                                              `Detail Description updated [${name}][${descName}]:`,
+                                              value
+                                            );
+                                            form.setFieldValue(
+                                              [
+                                                "variants",
+                                                name,
+                                                "detailDescription",
+                                                descName,
+                                                "description",
+                                              ],
+                                              value
+                                            );
+                                          }}
+                                          value={
+                                            form.getFieldValue([
+                                              "variants",
+                                              name,
+                                              "detailDescription",
+                                              descName,
+                                              "description",
+                                            ]) || ""
+                                          }
+                                        />
+                                      </Form.Item>
+                                    </Col>
+                                    <Col span={2}>
+                                      <Button
+                                        type="link"
+                                        danger
+                                        onClick={() => removeDesc(descName)}
+                                      >
+                                        Remove
+                                      </Button>
+                                    </Col>
+                                  </Row>
+                                  <Row gutter={16}>
+                                    <Col span={24}>
+                                      <Form.Item
+                                        {...descRestField}
+                                        name={[descName, "image"]}
+                                        valuePropName="fileList"
+                                        getValueFromEvent={normFile}
+                                      >
+                                        <CloudinaryUploader
+                                          cloudName={cloudName}
+                                          uploadPreset={uploadPreset}
+                                          listType="picture-card"
+                                          maxCount={1}
+                                          onUploadSuccess={(fileList) => {
+                                            console.log(
+                                              `Detail Desc Image uploaded [${name}][${descName}]:`,
+                                              JSON.stringify(fileList, null, 2)
+                                            );
+                                            form.setFieldValue(
+                                              [
+                                                "variants",
+                                                name,
+                                                "detailDescription",
+                                                descName,
+                                                "image",
+                                              ],
+                                              fileList
+                                            );
+                                          }}
+                                          fileList={
+                                            form.getFieldValue([
+                                              "variants",
+                                              name,
+                                              "detailDescription",
+                                              descName,
+                                              "image",
+                                            ]) || []
+                                          }
+                                        />
+                                      </Form.Item>
+                                    </Col>
+                                  </Row>
+                                </div>
+                              )
+                            )}
                             <Form.Item>
                               <Button
                                 type="dashed"
@@ -1433,6 +1610,26 @@ const Products = () => {
                           </>
                         )}
                       </Form.List>
+
+                      <Divider orientation="left"> Variant SEO</Divider>
+                      <Form.Item
+                        {...restField}
+                        name={[name, "seoTitle"]}
+                        label="SEO Title"
+                      >
+                        <Input placeholder="Enter variant SEO title" />
+                      </Form.Item>
+
+                      <Form.Item
+                        {...restField}
+                        name={[name, "seoDescription"]}
+                        label="SEO Description"
+                      >
+                        <TextArea
+                          rows={4}
+                          placeholder="Enter variant SEO description"
+                        />
+                      </Form.Item>
 
                       <Button
                         type="danger"
@@ -1483,8 +1680,16 @@ const Products = () => {
                             name={[name, "rating"]}
                             label="Rating"
                             rules={[
-                              { required: true, message: "Please enter rating!" },
-                              { type: "number", min: 1, max: 5, message: "Rating must be between 1 and 5" },
+                              {
+                                required: true,
+                                message: "Please enter rating!",
+                              },
+                              {
+                                type: "number",
+                                min: 1,
+                                max: 5,
+                                message: "Rating must be between 1 and 5",
+                              },
                             ]}
                           >
                             <InputNumber
@@ -1531,25 +1736,30 @@ const Products = () => {
             <Row gutter={16}>
               <Col span={8}>
                 <Form.Item name="multipack" label="Multipack">
-                  <InputNumber min={1} defaultValue={1} />
+                  <InputNumber min={1} />
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item name="isBundle" label="Is Bundle" valuePropName="checked">
+                <Form.Item
+                  name="isBundle"
+                  label="Is Bundle"
+                  valuePropName="checked"
+                >
                   <Checkbox />
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item name="customizable" label="Customizable" valuePropName="checked">
+                <Form.Item
+                  name="customizable"
+                  label="Customizable"
+                  valuePropName="checked"
+                >
                   <Checkbox />
                 </Form.Item>
               </Col>
             </Row>
 
-            <Divider
-              orientation="left"
-              style={{ fontWeight: "bold", fontSize: "16px" }}
-            >
+            <Divider style={{ fontWeight: "bold", fontSize: "16px" }}>
               SEO Information
             </Divider>
 
@@ -1559,6 +1769,26 @@ const Products = () => {
 
             <Form.Item name="seoDescription" label="SEO Description">
               <TextArea placeholder="Enter SEO description" />
+            </Form.Item>
+
+            <Divider
+              orientation="left"
+              style={{ fontWeight: "bold", fontSize: "16px" }}
+            >
+              Schema Information
+            </Divider>
+
+            <Form.Item
+              name="schemaName"
+              label="Product Schema"
+              rules={[
+                {
+                  required: true,
+                  message: "Please enter a schema name",
+                },
+              ]}
+            >
+              <TextArea rows={4} placeholder="Enter the schema name" />
             </Form.Item>
           </Form>
         </Modal>
