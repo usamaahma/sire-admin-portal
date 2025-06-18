@@ -1,11 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { Table, message } from 'antd';
+import { Table, message, Popconfirm, Button } from 'antd';
 import { newsletter } from "../../utils/axios";
 import './newsletter.css';
 
 function Newsletter() {
   const [emails, setEmails] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // DELETE email
+  const handleDelete = async (id) => {
+    try {
+      setLoading(true);
+      await newsletter.delete(`/${id}`); // Assuming DELETE /:id works on backend
+      setEmails(emails.filter(email => email._id !== id));
+      message.success('Email deleted successfully');
+    } catch (error) {
+      message.error('Failed to delete the email');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Table columns
   const columns = [
@@ -18,7 +32,21 @@ function Newsletter() {
       title: 'Subscribed On',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date) => new Date(date).toLocaleString(), // Format date
+      render: (date) => new Date(date).toLocaleString(),
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      render: (_, record) => (
+        <Popconfirm
+          title="Are you sure you want to delete this email?"
+          onConfirm={() => handleDelete(record._id)}
+          okText="Yes"
+          cancelText="No"
+        >
+          <Button danger type="link">Delete</Button>
+        </Popconfirm>
+      ),
     },
   ];
 
@@ -26,7 +54,7 @@ function Newsletter() {
   const fetchEmails = async () => {
     try {
       setLoading(true);
-      const response = await newsletter.get('/'); // Adjust your backend route if needed
+      const response = await newsletter.get('/');
       setEmails(response.data);
     } catch (error) {
       message.error('Failed to load newsletter emails');

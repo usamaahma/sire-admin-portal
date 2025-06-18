@@ -46,6 +46,7 @@ const Blog = () => {
   // Modal states
   const [modalVisible, setModalVisible] = useState(false);
   const [editingBlog, setEditingBlog] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
 
   // Form states
   const [title, setTitle] = useState("");
@@ -53,6 +54,8 @@ const Blog = () => {
   const [blogCategory, setBlogCategory] = useState("");
   const [hasCarousel, setHasCarousel] = useState(false);
   const [mainImage, setMainImage] = useState("");
+  const [seoTitle, setSeoTitle] = useState("");
+  const [seoDescription, setSeoDescription] = useState("");
   const [details, setDetails] = useState([
     {
       detailTitle: "",
@@ -120,6 +123,8 @@ const Blog = () => {
     setBlogCategory("");
     setHasCarousel(false);
     setMainImage("");
+    setSeoTitle("");
+    setSeoDescription("");
     setDetails([
       {
         detailTitle: "",
@@ -142,6 +147,8 @@ const Blog = () => {
       setBlogCategory(blog.blogCategory?._id || "");
       setHasCarousel(blog.hasCarousel || false);
       setMainImage(blog.image || "");
+      setSeoTitle(blog.seoTitle || "");
+      setSeoDescription(blog.seoDescription || "");
 
       const fixedDetails = (blog.details || []).map((d) => ({
         detailTitle: d.detailTitle || "",
@@ -285,8 +292,38 @@ const Blog = () => {
     });
   };
 
+  const handleMainImageUpload = (fileList) => {
+    // Extract the latest uploaded file's URL
+    const latestFile = fileList[fileList.length - 1];
+    if (latestFile?.url) {
+      setMainImage(latestFile.url);
+      message.success("Main image uploaded successfully");
+    } else {
+      message.error("Failed to upload main image");
+    }
+  };
+
+  const handleDetailImageUpload = (fileList, detailIndex) => {
+    // Extract the latest uploaded file's URL
+    const latestFile = fileList[fileList.length - 1];
+    if (latestFile?.url) {
+      setDetails((prev) => {
+        const newDetails = [...prev];
+        newDetails[detailIndex].images = [
+          ...(newDetails[detailIndex].images || []),
+          latestFile.url,
+        ];
+        return newDetails;
+      });
+      message.success("Detail image uploaded successfully");
+    } else {
+      message.error("Failed to upload detail image");
+    }
+  };
+
   const handleSubmit = async () => {
     try {
+      setModalLoading(true);
       await form.validateFields();
 
       if (!mainImage) {
@@ -301,6 +338,8 @@ const Blog = () => {
         image: mainImage,
         hasCarousel,
         details,
+        seoTitle,
+        seoDescription,
       };
 
       if (editingBlog) {
@@ -327,6 +366,8 @@ const Blog = () => {
       } else if (!error.errorFields) {
         message.error("Validation failed");
       }
+    } finally {
+      setModalLoading(false);
     }
   };
 
@@ -457,6 +498,7 @@ const Blog = () => {
         onCancel={closeModal}
         onOk={handleSubmit}
         okText={editingBlog ? "Update" : "Create"}
+        confirmLoading={modalLoading}
         width={1200}
         destroyOnClose
         bodyStyle={{ maxHeight: "80vh", overflowY: "auto", padding: "24px 0" }}
@@ -469,6 +511,8 @@ const Blog = () => {
             blogAuthor,
             blogCategory,
             hasCarousel,
+            seoTitle,
+            seoDescription,
           }}
         >
           <Row gutter={24}>
@@ -565,19 +609,27 @@ const Blog = () => {
                   uploadPreset={uploadPreset}
                   listType="picture-card"
                   maxCount={1}
-                  onUploadSuccess={(data) => {
-                    if (data?.secure_url) {
-                      setMainImage(data.secure_url);
-                    } else {
-                      message.error("Failed to upload main image");
-                    }
-                  }}
+                  onUploadSuccess={handleMainImageUpload}
                 >
                   <div>
                     <PlusOutlined />
                     <div style={{ marginTop: 8 }}>Upload Main Image</div>
                   </div>
                 </CloudinaryUploader>
+                {mainImage && (
+                  <img
+                    src={mainImage}
+                    alt="main-preview"
+                    style={{
+                      width: 100,
+                      height: 100,
+                      objectFit: 'cover',
+                      borderRadius: 6,
+                      marginTop: 12,
+                      border: '1px solid #d9d9d9'
+                    }}
+                  />
+                )}
               </Form.Item>
             </Col>
 
@@ -596,6 +648,38 @@ const Blog = () => {
                     />
                   </Tooltip>
                 </div>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={24}>
+            <Col span={12}>
+              <Form.Item
+                label="SEO Title"
+                name="seoTitle"
+                tooltip="This will appear in search engine results"
+              >
+                <Input
+                  placeholder="Enter SEO title (max 60 characters)"
+                  maxLength={60}
+                  value={seoTitle}
+                  onChange={(e) => setSeoTitle(e.target.value)}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="SEO Description"
+                name="seoDescription"
+                tooltip="This will appear in search engine results"
+              >
+                <Input.TextArea
+                  placeholder="Enter SEO description (max 160 characters)"
+                  maxLength={160}
+                  rows={3}
+                  value={seoDescription}
+                  onChange={(e) => setSeoDescription(e.target.value)}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -704,21 +788,8 @@ const Blog = () => {
                       cloudName={cloudName}
                       uploadPreset={uploadPreset}
                       listType="picture-card"
-                      maxCount={10} // Adjust as needed
-                      onUploadSuccess={(data) => {
-                        if (data?.secure_url) {
-                          setDetails((prev) => {
-                            const newDetails = [...prev];
-                            newDetails[detailIndex].images = [
-                              ...(newDetails[detailIndex].images || []),
-                              data.secure_url,
-                            ];
-                            return newDetails;
-                          });
-                        } else {
-                          message.error("Failed to upload detail image");
-                        }
-                      }}
+                      maxCount={10}
+                      onUploadSuccess={(fileList) => handleDetailImageUpload(fileList, detailIndex)}
                     >
                       <div>
                         <PlusOutlined />
@@ -744,6 +815,26 @@ const Blog = () => {
                               objectFit: "cover",
                               borderRadius: 6,
                               border: "1px solid #d9d9d9",
+                            }}
+                          />
+                          <Button
+                            type="text"
+                            danger
+                            icon={<CloseOutlined />}
+                            style={{
+                              position: "absolute",
+                              top: -10,
+                              right: -10,
+                              zIndex: 1,
+                            }}
+                            onClick={() => {
+                              setDetails((prev) => {
+                                const newDetails = [...prev];
+                                newDetails[detailIndex].images = newDetails[
+                                  detailIndex
+                                ].images.filter((_, i) => i !== imgIndex);
+                                return newDetails;
+                              });
                             }}
                           />
                         </div>

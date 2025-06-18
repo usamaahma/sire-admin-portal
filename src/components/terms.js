@@ -54,6 +54,7 @@ const TermsConditions = () => {
   const fetchTermsData = async () => {
     try {
       const response = await terms.get("/");
+      console.log("responce get waka", response)
       const responseData = response.data;
 
       if (responseData && responseData.length > 0) {
@@ -63,6 +64,8 @@ const TermsConditions = () => {
             title: t,
             description: item.description[i] || "",
           })),
+          seoTitle: item.seoTitle,
+          seoDescription: item.seoDescription,
         }));
         setData(formattedData);
       } else {
@@ -85,7 +88,11 @@ const TermsConditions = () => {
     setCurrentMode("edit");
     setCurrentRecord(record);
     setItems(record.items);
-    form.setFieldsValue({ items: record.items });
+    form.setFieldsValue({
+      items: record.items,
+      seoTitle: record.seoTitle || "",
+      seoDescription: record.seoDescription || "",
+    });
     setIsModalVisible(true);
   };
 
@@ -123,6 +130,8 @@ const TermsConditions = () => {
       const payload = {
         title: titles,
         description: descriptions,
+        seoTitle: values.seoTitle,
+        seoDescription: values.seoDescription,
       };
 
       if (currentMode === "edit" && currentRecord) {
@@ -232,6 +241,22 @@ const TermsConditions = () => {
         destroyOnClose
       >
         <Form form={form} layout="vertical">
+          <Form.Item
+            label="SEO Title"
+            name="seoTitle"
+            rules={[{ required: false }]}
+          >
+            <Input placeholder="Enter SEO Title" />
+          </Form.Item>
+
+          <Form.Item
+            label="SEO Description"
+            name="seoDescription"
+            rules={[{ required: false }]}
+          >
+            <Input.TextArea placeholder="Enter SEO Description" rows={4} />
+          </Form.Item>
+
           {items.map((item, index) => (
             <div key={index} style={{ marginBottom: 32, borderBottom: '1px solid #ddd', paddingBottom: 16 }}>
               <Form.Item

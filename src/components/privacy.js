@@ -15,7 +15,7 @@ import {
 } from "@ant-design/icons";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import { privacy } from "../utils/axios"; // 👈 import your Axios instance
+import { privacy } from "../utils/axios";
 
 const PrivacyPolicy = () => {
   const [data, setData] = useState([]);
@@ -63,6 +63,8 @@ const PrivacyPolicy = () => {
             title: t,
             description: item.description[i] || "",
           })),
+          seoTitle: item.seoTitle || "",
+          seoDescription: item.seoDescription || "",
         }));
         setData(formattedData);
       } else {
@@ -85,12 +87,17 @@ const PrivacyPolicy = () => {
     setCurrentMode("edit");
     setCurrentRecord(record);
     setItems(record.items);
-    form.setFieldsValue({ items: record.items });
+    form.setFieldsValue({
+      items: record.items,
+      seoTitle: record.seoTitle || "",
+      seoDescription: record.seoDescription || "",
+    });
     setIsModalVisible(true);
   };
 
   const handleViewClick = (record) => {
     setItems(record.items);
+    setCurrentRecord(record);
     setIsViewModalVisible(true);
   };
 
@@ -123,6 +130,8 @@ const PrivacyPolicy = () => {
       const payload = {
         title: titles,
         description: descriptions,
+        seoTitle: values.seoTitle || "",
+        seoDescription: values.seoDescription || "",
       };
 
       if (currentMode === "edit" && currentRecord) {
@@ -232,6 +241,13 @@ const PrivacyPolicy = () => {
         destroyOnClose
       >
         <Form form={form} layout="vertical">
+          <Form.Item label="SEO Title" name="seoTitle">
+            <Input placeholder="Enter SEO Title" />
+          </Form.Item>
+          <Form.Item label="SEO Description" name="seoDescription">
+            <Input.TextArea placeholder="Enter SEO Description" rows={3} />
+          </Form.Item>
+
           {items.map((item, index) => (
             <div key={index} style={{ marginBottom: 32, borderBottom: '1px solid #ddd', paddingBottom: 16 }}>
               <Form.Item
@@ -274,6 +290,19 @@ const PrivacyPolicy = () => {
         footer={<Button onClick={() => setIsViewModalVisible(false)}>Close</Button>}
         width="80%"
       >
+        {currentRecord?.seoTitle && (
+          <>
+            <h4>SEO Title</h4>
+            <p>{currentRecord.seoTitle}</p>
+          </>
+        )}
+        {currentRecord?.seoDescription && (
+          <>
+            <h4>SEO Description</h4>
+            <p>{currentRecord.seoDescription}</p>
+          </>
+        )}
+
         {items.map((item, index) => (
           <div key={index} style={{ marginBottom: 32 }}>
             <h3>{item.title}</h3>

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Input, message, Popconfirm } from 'antd';
+import { Table, Button, Modal, Input, message, Popconfirm, Form } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { blogauthors } from '../../utils/axios';
-import CloudinaryUploader from '../cloudinary/CloudinaryUploader'; // Adjust the path as needed
+import CloudinaryUploader from '../cloudinary/CloudinaryUploader';
 
 const cloudName = "dxhpud7sx";
 const uploadPreset = "sireprinting";
@@ -15,13 +15,8 @@ const Blogauthor = () => {
   const [editAuthor, setEditAuthor] = useState(null);
   const [loading, setLoading] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
+  const [form] = Form.useForm();
 
-  // Form states
-  const [name, setName] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [description, setDescription] = useState('');
-
-  // Fetch authors on component mount
   useEffect(() => {
     fetchAuthors();
   }, []);
@@ -30,9 +25,6 @@ const Blogauthor = () => {
     try {
       setLoading(true);
       const res = await blogauthors.get('/');
-      console.log('API response:', res.data);
-
-      // Updated logic to match API response structure
       if (res.data && Array.isArray(res.data.data)) {
         setBlogAuthors(res.data.data);
       } else if (res.data && Array.isArray(res.data.authors)) {
@@ -50,17 +42,26 @@ const Blogauthor = () => {
     }
   };
 
-  // Open modal for add/edit
   const openModal = (author = null) => {
     setEditAuthor(author);
     if (author) {
-      setName(author.name);
-      setImageUrl(author.image);
-      setDescription(author.description || '');
+      form.setFieldsValue({
+        name: author.name,
+        image: author.image
+          ? [{
+              uid: '-1',
+              name: 'author-image.png',
+              status: 'done',
+              url: author.image,
+              thumbUrl: author.image,
+            }]
+          : [],
+        description: author.description || '',
+        seoTitle: author.seoTitle || '',
+        seoDescription: author.seoDescription || '',
+      });
     } else {
-      setName('');
-      setImageUrl('');
-      setDescription('');
+      form.resetFields();
     }
     setModalVisible(true);
   };
@@ -68,38 +69,47 @@ const Blogauthor = () => {
   const closeModal = () => {
     setModalVisible(false);
     setEditAuthor(null);
-    setName('');
-    setImageUrl('');
-    setDescription('');
+    form.resetFields();
   };
 
-  // Submit add/update author
-  const handleSubmit = async () => {
-    if (!name.trim()) {
-      message.error('Name is required');
-      return;
+  const handleUploadSuccess = (data, formFieldName) => {
+    if (Array.isArray(data)) {
+      // Handle image removal or existing fileList
+      form.setFieldsValue({ [formFieldName]: data });
+    } else if (data?.url) {
+      // Handle new image upload
+      const newFileList = [{
+        uid: data.uid,
+        name: data.name,
+        status: data.status,
+        url: data.url,
+        thumbUrl: data.thumbUrl,
+      }];
+      form.setFieldsValue({ [formFieldName]: newFileList });
+    } else {
+      message.error('Image upload failed!');
     }
-    if (!imageUrl) {
-      message.error('Image is required');
-      return;
-    }
+  };
+
+  const handleSubmit = async (values) => {
     try {
       setModalLoading(true);
+      const payload = {
+        name: values.name,
+        image: values.image?.[0]?.url || '',
+        description: values.description,
+        seoTitle: values.seoTitle,
+        seoDescription: values.seoDescription,
+      };
+
       if (editAuthor) {
-        await blogauthors.put(`/${editAuthor._id}`, {
-          name,
-          image: imageUrl,
-          description,
-        });
+        await blogauthors.put(`/${editAuthor._id}`, payload);
         message.success('Author updated successfully!');
       } else {
-        await blogauthors.post('/', {
-          name,
-          image: imageUrl,
-          description,
-        });
+        await blogauthors.post('/', payload);
         message.success('Author created successfully!');
       }
+
       closeModal();
       fetchAuthors();
     } catch (err) {
@@ -109,7 +119,6 @@ const Blogauthor = () => {
     }
   };
 
-  // Delete author with confirmation
   const handleDelete = async (id) => {
     try {
       setLoading(true);
@@ -199,67 +208,84 @@ const Blogauthor = () => {
 
       <Modal
         title={editAuthor ? 'Edit Blog Author' : 'Add Blog Author'}
-        visible={modalVisible}
+        open={modalVisible}
         onCancel={closeModal}
-        onOk={handleSubmit}
-        okText={editAuthor ? 'Update' : 'Create'}
+        footer={null}
         confirmLoading={modalLoading}
         destroyOnClose
         width={700}
       >
-        <Input
-          placeholder="Enter author name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{ marginBottom: 15 }}
-          maxLength={100}
-        />
-
-        <div style={{ marginBottom: 15 }}>
-          <CloudinaryUploader
-            cloudName={cloudName}
-            uploadPreset={uploadPreset}
-            listType="picture-card"
-            maxCount={1}
-            onUploadSuccess={(data) => {
-              if (data?.secure_url) {
-                setImageUrl(data.secure_url);
-              } else {
-                message.error('Failed to upload image');
-              }
-            }}
-            disabled={modalLoading}
+        <Form form={form} onFinish={handleSubmit} layout="vertical">
+          <Form.Item
+            label="Author Name"
+            name="name"
+            rules={[{ required: true, message: 'Please enter author name' }]}
           >
-            <div>
-              <PlusOutlined />
-              <div style={{ marginTop: 8 }}>{imageUrl ? 'Change Image' : 'Upload Image'}</div>
-            </div>
-          </CloudinaryUploader>
-        </div>
+            <Input placeholder="Enter author name" maxLength={100} />
+          </Form.Item>
 
-        {imageUrl && (
-          <img
-            src={imageUrl}
-            alt="author preview"
-            style={{
-              width: 120,
-              height: 120,
-              marginBottom: 15,
-              objectFit: 'cover',
-              borderRadius: 6,
-              border: '1px solid #ddd',
-            }}
-          />
-        )}
+          <Form.Item
+            label="Author Image"
+            name="image"
+            valuePropName="fileList"
+            getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList || [])}
+            rules={[{ required: true, message: 'Please upload an image' }]}
+          >
+            <CloudinaryUploader
+              cloudName={cloudName}
+              uploadPreset={uploadPreset}
+              listType="picture-card"
+              fileList={form.getFieldValue('image') || []}
+              onUploadSuccess={(data) => handleUploadSuccess(data, 'image')}
+              disabled={modalLoading}
+            >
+              <div>
+                <PlusOutlined />
+                <div style={{ marginTop: 8 }}>
+                  {form.getFieldValue('image')?.length ? 'Change Image' : 'Upload Image'}
+                </div>
+              </div>
+            </CloudinaryUploader>
+          </Form.Item>
 
-        <ReactQuill
-          theme="snow"
-          value={description}
-          onChange={setDescription}
-          placeholder="Enter author description"
-          readOnly={modalLoading}
-          style={{ height: 150 }}
-        />
+          <Form.Item
+            label="Description"
+            name="description"
+          >
+            <ReactQuill
+              theme="snow"
+              value={form.getFieldValue('description') || ''}
+              onChange={(value) => form.setFieldsValue({ description: value })}
+              placeholder="Enter author description"
+              readOnly={modalLoading}
+              style={{ height: 150, marginBottom: 50 }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="SEO Title"
+            name="seoTitle"
+          >
+            <Input placeholder="SEO Title" maxLength={60} />
+          </Form.Item>
+
+          <Form.Item
+            label="SEO Description"
+            name="seoDescription"
+          >
+            <Input.TextArea
+              placeholder="SEO Description"
+              rows={3}
+              maxLength={160}
+            />
+          </Form.Item>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit" block disabled={modalLoading}>
+              {editAuthor ? 'Update' : 'Create'} Author
+            </Button>
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );
