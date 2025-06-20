@@ -29,8 +29,8 @@ function Subcategory() {
   });
 
   // Cloudinary configuration
-  const cloudName = "dxhpud7sx"; // Same as Categories
-  const uploadPreset = "sireprinting"; // Same as Categories
+  const cloudName = "dxhpud7sx";
+  const uploadPreset = "sireprinting";
 
   // Quill modules and formats
   const modules = {
@@ -115,44 +115,14 @@ function Subcategory() {
   };
 
   // Handle Cloudinary upload success
-  const handleImageUpload = (data, fieldName) => {
-    if (!data?.secure_url) {
-      message.error("Image upload failed!");
-      return;
-    }
-    const newFileList = [
-      {
-        uid: `-${Math.random()}`,
-        name: data.original_filename || "image.png",
-        status: "done",
-        url: data.secure_url,
-      },
-    ];
-    setFormData((prev) => ({ ...prev, [fieldName]: newFileList }));
+  const handleImageUpload = (fileList, fieldName) => {
+    setFormData((prev) => ({ ...prev, [fieldName]: fileList }));
   };
 
   // Handle Cloudinary upload for details
-  const handleDetailImagesUpload = (data, detailIndex) => {
-    if (!data?.secure_url) {
-      message.error("Image upload failed!");
-      return;
-    }
-    const newFile = {
-      uid: `detail-${detailIndex}-${Math.random()}`,
-      name: data.original_filename || "detail-image.png",
-      status: "done",
-      url: data.secure_url,
-    };
+  const handleDetailImagesUpload = (fileList, detailIndex) => {
     const updatedDetails = [...formData.details];
-    // Allow only one image per detail as per backend structure
-    updatedDetails[detailIndex].images = [newFile];
-    setFormData((prev) => ({ ...prev, details: updatedDetails }));
-  };
-
-  // Remove detail image
-  const removeDetailImage = (detailIndex) => {
-    const updatedDetails = [...formData.details];
-    updatedDetails[detailIndex].images = [];
+    updatedDetails[detailIndex].images = fileList;
     setFormData((prev) => ({ ...prev, details: updatedDetails }));
   };
 
@@ -370,11 +340,8 @@ function Subcategory() {
                   cloudName={cloudName}
                   uploadPreset={uploadPreset}
                   listType="picture-card"
-                  onUploadSuccess={(data) => handleImageUpload(data, "image")}
+                  onUploadSuccess={(fileList) => handleImageUpload(fileList, "image")}
                   fileList={formData.image}
-                  onChange={(fileList) =>
-                    setFormData((prev) => ({ ...prev, image: fileList }))
-                  }
                 />
               </div>
 
@@ -384,13 +351,8 @@ function Subcategory() {
                   cloudName={cloudName}
                   uploadPreset={uploadPreset}
                   listType="picture-card"
-                  onUploadSuccess={(data) =>
-                    handleImageUpload(data, "pageImage")
-                  }
+                  onUploadSuccess={(fileList) => handleImageUpload(fileList, "pageImage")}
                   fileList={formData.pageImage}
-                  onChange={(fileList) =>
-                    setFormData((prev) => ({ ...prev, pageImage: fileList }))
-                  }
                 />
               </div>
             </div>
@@ -487,18 +449,10 @@ function Subcategory() {
                       cloudName={cloudName}
                       uploadPreset={uploadPreset}
                       listType="picture-card"
-                      onUploadSuccess={(data) =>
-                        handleDetailImagesUpload(data, index)
+                      onUploadSuccess={(fileList) =>
+                        handleDetailImagesUpload(fileList, index)
                       }
                       fileList={detail.images}
-                      onChange={(fileList) => {
-                        const updatedDetails = [...formData.details];
-                        updatedDetails[index].images = fileList;
-                        setFormData((prev) => ({
-                          ...prev,
-                          details: updatedDetails,
-                        }));
-                      }}
                     />
                   </div>
 
