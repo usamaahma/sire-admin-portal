@@ -29,7 +29,7 @@ const Login = () => {
       }
 
       // Store user data
-      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("token", response.data.tokens.access.token);
       localStorage.setItem("username", response.data.user.name);
       localStorage.setItem("role", response.data.user.role);
       localStorage.setItem("userData", JSON.stringify(response.data.user));

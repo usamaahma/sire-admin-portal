@@ -6,6 +6,9 @@ const baseURL = process.env.REACT_APP_API_URL; // Make sure your .env file is co
 const product = axios.create({
   baseURL: `${baseURL}/products`,
 });
+const user = axios.create({
+  baseURL: `${baseURL}/users`,
+});
 
 // Create instances with consistent base URLs for each service
 const login = axios.create({
@@ -62,6 +65,9 @@ const newsletter = axios.create({
 const dieline = axios.create({
   baseURL: `${baseURL}/dielineform`,
 });
+const orders = axios.create({
+  baseURL: `${baseURL}/order`,
+});
 // Generic request interceptor for all instances
 const requestInterceptor = (req) => {
   // Optionally add authorization headers or custom logic
@@ -97,6 +103,8 @@ portfolio.interceptors.request.use(requestInterceptor, errorInterceptor);
 instantquot.interceptors.request.use(requestInterceptor, errorInterceptor);
 newsletter.interceptors.request.use(requestInterceptor, errorInterceptor);
 dieline.interceptors.request.use(requestInterceptor, errorInterceptor);
+orders.interceptors.request.use(requestInterceptor, errorInterceptor);
+user.interceptors.request.use(requestInterceptor, errorInterceptor);
 
 export {
   signup,
@@ -117,4 +125,6 @@ export {
   instantquot,
   newsletter,
   dieline,
+  orders,
+  user,
 };

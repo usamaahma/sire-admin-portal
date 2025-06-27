@@ -21,7 +21,8 @@ import {
   UserOutlined,
   RocketOutlined,
   MailOutlined, // Added for Newsletter icon
-  TagsOutlined, // Added for Dielineform icon
+  TagsOutlined,
+  OrderedListOutlined, // Added for Dielineform icon
 } from "@ant-design/icons";
 
 import Dashboard from "./dashboard";
@@ -45,6 +46,7 @@ import Blogauthor from "./blogs/blogauthor";
 import Instantquote from "./instantquote/instantquote";
 import Newsletter from "./newsletter/newsletter";
 import Dielineform from "./dieline-form/dielineform";
+import Orders from "./orders/orders";
 
 const AdminPortal = () => {
   const [activeContent, setActiveContent] = useState("Dashboard");
@@ -68,6 +70,8 @@ const AdminPortal = () => {
         return <Products />;
       case "Categories":
         return <Categories setActiveContent={setActiveContent} />;
+      case "Orders":
+        return <Orders />;
       case "Navbar Categories":
         return <Navbarcategory />;
       case "Get a Quote":
@@ -155,6 +159,7 @@ const AdminPortal = () => {
     { name: "Products", icon: <ShoppingOutlined /> },
     { name: "Navbar Categories", icon: <MenuOutlined /> },
     { name: "Categories", icon: <AppstoreOutlined /> },
+    { name: "Orders", icon: <OrderedListOutlined /> },
     { name: "Get a Quote", icon: <FormOutlined /> },
     { name: "Instant Quote", icon: <RocketOutlined /> },
     { name: "Portfolio", icon: <PictureOutlined /> },
