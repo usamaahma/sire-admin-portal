@@ -1,0 +1,105 @@
+.orders-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #f5f5f5;
+}
+
+.orders-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.search-input {
+  width: 300px;
+  height: 40px;
+  border-radius: 4px;
+}
+
+.create-order-btn {
+  background-color: #1890ff !important;
+  border-color: #1890ff !important;
+  height: 40px;
+  font-weight: 500;
+}
+
+.create-order-btn:hover {
+  background-color: #40a9ff !important;
+  border-color: #40a9ff !important;
+}
+
+.users-table .ant-table {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.users-table .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+  color: #333;
+}
+
+.view-orders-btn {
+  background-color: #52c41a !important;
+  border-color: #52c41a !important;
+}
+
+.view-orders-btn:hover {
+  background-color: #73d13d !important;
+  border-color: #73d13d !important;
+}
+
+.modal-close-btn {
+  background-color: #ff4d4f !important;
+  border-color: #ff4d4f !important;
+}
+
+.modal-close-btn:hover {
+  background-color: #ff7875 !important;
+  border-color: #ff7875 !important;
+}
+
+.size-inputs {
+  display: flex;
+  gap: 12px;
+}
+
+.size-inputs .ant-input-number,
+.size-inputs .ant-select {
+  width: 100px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.ant-modal-content {
+  border-radius: 8px;
+}
+
+.ant-modal-header {
+  border-radius: 8px 8px 0 0;
+  background: #1890ff;
+}
+
+.ant-modal-title {
+  color: #fff !important;
+  font-weight: 600;
+}
+
+.ant-form-item-label > label {
+  font-weight: 500;
+  color: #333;
+}
+
+.ant-input,
+.ant-input-number,
+.ant-select-selector {
+  border-radius: 4px !important;
+}
