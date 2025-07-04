@@ -20,9 +20,9 @@ import {
   MenuOutlined,
   UserOutlined,
   RocketOutlined,
-  MailOutlined, // Added for Newsletter icon
+  MailOutlined,
   TagsOutlined,
-  OrderedListOutlined, // Added for Dielineform icon
+  OrderedListOutlined,
 } from "@ant-design/icons";
 
 import Dashboard from "./dashboard";
@@ -47,11 +47,13 @@ import Instantquote from "./instantquote/instantquote";
 import Newsletter from "./newsletter/newsletter";
 import Dielineform from "./dieline-form/dielineform";
 import Orders from "./orders/orders";
+import Samplerequests from "./orders/samplerequests";
 
 const AdminPortal = () => {
   const [activeContent, setActiveContent] = useState("Dashboard");
   const [activeTab, setActiveTab] = useState("Blog Categories");
   const [isBlogManagementOpen, setIsBlogManagementOpen] = useState(false);
+  const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [username, setUsername] = useState("User");
   const navigate = useNavigate();
 
@@ -72,6 +74,8 @@ const AdminPortal = () => {
         return <Categories setActiveContent={setActiveContent} />;
       case "Orders":
         return <Orders />;
+      case "Sample Requests":
+        return <Samplerequests />;
       case "Navbar Categories":
         return <Navbarcategory />;
       case "Get a Quote":
@@ -86,9 +90,9 @@ const AdminPortal = () => {
         return <Testimonial />;
       case "FAQs":
         return <Faqs />;
-      case "Newsletter": // Added case for Newsletter
+      case "Newsletter":
         return <Newsletter />;
-      case "Dieline Form": // Added case for Dieline Form
+      case "Dieline Form":
         return <Dielineform />;
       case "Blog Management":
         return (
@@ -154,20 +158,26 @@ const AdminPortal = () => {
     }
   };
 
+  const toggleOrders = () => {
+    setIsOrdersOpen((prev) => !prev);
+    if (!isOrdersOpen) {
+      setActiveContent("Orders");
+    }
+  };
+
   const menuItems = [
     { name: "Dashboard", icon: <DashboardOutlined /> },
     { name: "Products", icon: <ShoppingOutlined /> },
     { name: "Navbar Categories", icon: <MenuOutlined /> },
     { name: "Categories", icon: <AppstoreOutlined /> },
-    { name: "Orders", icon: <OrderedListOutlined /> },
     { name: "Get a Quote", icon: <FormOutlined /> },
     { name: "Instant Quote", icon: <RocketOutlined /> },
     { name: "Portfolio", icon: <PictureOutlined /> },
     { name: "Product Sorting", icon: <SortAscendingOutlined /> },
     { name: "Testimonial", icon: <MessageOutlined /> },
     { name: "FAQs", icon: <QuestionCircleOutlined /> },
-    { name: "Newsletter", icon: <MailOutlined /> }, // Added Newsletter menu item
-    { name: "Dieline Form", icon: <TagsOutlined /> }, // Added Dieline Form menu item
+    { name: "Newsletter", icon: <MailOutlined /> },
+    { name: "Dieline Form", icon: <TagsOutlined /> },
     { name: "About", icon: <InfoCircleOutlined /> },
     { name: "Terms and Conditions", icon: <FileTextOutlined /> },
     { name: "Privacy Policy", icon: <LockOutlined /> },
@@ -197,6 +207,7 @@ const AdminPortal = () => {
                 } else {
                   setIsBlogManagementOpen(false);
                 }
+                setIsOrdersOpen(false);
               }}
             >
               <span className="link-icon">{item.icon}</span>
@@ -204,6 +215,55 @@ const AdminPortal = () => {
             </button>
           ))}
 
+          {/* Orders Dropdown */}
+          <div className="orders-management">
+            <button
+              className={`sider-link dropdown-toggle ${
+                activeContent === "Orders" ||
+                activeContent === "Sample Requests"
+                  ? "active"
+                  : ""
+              }`}
+              onClick={toggleOrders}
+            >
+              <span className="link-icon">
+                <OrderedListOutlined />
+              </span>
+              <span className="link-text">Orders</span>
+              <span className="dropdown-icon">
+                {isOrdersOpen ? <UpOutlined /> : <DownOutlined />}
+              </span>
+            </button>
+
+            {isOrdersOpen && (
+              <div className="orders-submenu">
+                <button
+                  className={`submenu-link ${
+                    activeContent === "Orders" ? "active-submenu" : ""
+                  }`}
+                  onClick={() => {
+                    setActiveContent("Orders");
+                    setIsBlogManagementOpen(false);
+                  }}
+                >
+                  <OrderedListOutlined /> Orders
+                </button>
+                <button
+                  className={`submenu-link ${
+                    activeContent === "Sample Requests" ? "active-submenu" : ""
+                  }`}
+                  onClick={() => {
+                    setActiveContent("Sample Requests");
+                    setIsBlogManagementOpen(false);
+                  }}
+                >
+                  <FormOutlined /> Sample Requests
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Blog Management Dropdown */}
           <div className="blog-management">
             <button
               className={`sider-link dropdown-toggle ${
@@ -258,7 +318,9 @@ const AdminPortal = () => {
 
       <div className="main-content">
         <h1 className="content-heading">
-          {menuItems.find((item) => item.name === activeContent)?.icon}
+          {menuItems.find((item) => item.name === activeContent)?.icon ||
+            (activeContent === "Sample Requests" ? <FormOutlined /> : null) ||
+            (activeContent === "Orders" ? <OrderedListOutlined /> : null)}
           {activeContent}
         </h1>
         <div className="content-container">{renderContent()}</div>
