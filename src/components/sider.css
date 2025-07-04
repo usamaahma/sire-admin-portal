@@ -2,7 +2,7 @@
 .admin-portal {
   display: flex;
   min-height: 100vh;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f8fafc;
 }
 
@@ -235,7 +235,53 @@
 .tab-content {
   padding: 15px 0;
 }
+.orders-management {
+  width: 100%;
+  margin-bottom: 5px;
+}
 
+.orders-submenu {
+  padding-left: 30px;
+  background-color: transparent !important;
+  transition: all 0.3s;
+  overflow: hidden;
+}
+
+.orders-submenu .submenu-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 15px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+  margin-top: 0.2rem;
+}
+
+.orders-submenu .submenu-link:hover {
+  background-color: #4b64b1;
+}
+
+.orders-submenu .submenu-link.active-submenu {
+  background-color: #4b64b1;
+  font-weight: 500;
+}
+
+/* Sample Requests Content */
+.sample-requests-container {
+  padding: 20px;
+  background: transparent !important;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sample-requests-container h2 {
+  color: #333;
+  margin-bottom: 15px;
+}
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .admin-portal {
