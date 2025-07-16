@@ -30,6 +30,14 @@ import { category } from "../utils/axios";
 import Subcategory from "./sub-category";
 import "./categories.css";
 
+// Utility function to convert text to slug
+const convertToSlug = (text) => {
+  return text
+    .toLowerCase()
+    .replace(/[^\w ]+/g, "")
+    .replace(/ +/g, "-");
+};
+
 const Categories = ({ setActiveContent }) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -55,10 +63,10 @@ const Categories = ({ setActiveContent }) => {
           id: index + 1,
           _id: item._id,
           shortTitle: item.title,
+          slug: item.slug,
           description: item.description,
           categoryImage: item.image,
           pageImage: item.pageImage,
-          descriptionTitle: item.descriptionTitle,
           seoTitle: item.seoTitle,
           seoDescription: item.seoDescription,
           seoKeywords: item.seoKeyword,
@@ -88,65 +96,65 @@ const Categories = ({ setActiveContent }) => {
   };
 
   // Edit Category
-const handleEdit = (id) => {
-  const category = categories.find((category) => category._id === id);
-  if (!category) {
-    console.error("Category not found for ID:", id);
-    return;
-  }
+  const handleEdit = (id) => {
+    const category = categories.find((category) => category._id === id);
+    if (!category) {
+      console.error("Category not found for ID:", id);
+      return;
+    }
 
-  const formValues = {
-    shortTitle: category.shortTitle || "",
-    description: category.description || "",
-    descriptionTitle: category.descriptionTitle || "",
-    seoTitle: category.seoTitle || "",
-    seoDescription: category.seoDescription || "",
-    seoKeywords: category.seoKeywords?.split(",").map((k) => k.trim()) || [],
-    detailTitle: category.detailTitle || "",
-    detailSubtitle: category.detailSubtitle || "",
-    categoryImage: category.categoryImage
-      ? [
-          {
-            uid: "-1",
-            name: "category-image.png",
-            status: "done",
-            url: category.categoryImage,
-            thumbUrl: category.categoryImage,
-          },
-        ]
-      : [],
-    pageImage: category.pageImage
-      ? [
-          {
-            uid: "-2",
-            name: "page-image.png",
-            status: "done",
-            url: category.pageImage,
-            thumbUrl: category.pageImage,
-          },
-        ]
-      : [],
-    details: (category.details || []).map((detail, index) => ({
-      detailDescription: detail.detailDescription || "",
-      image: detail.image
+    const formValues = {
+      shortTitle: category.shortTitle || "",
+      slug: category.slug || "",
+      description: category.description || "",
+      seoTitle: category.seoTitle || "",
+      seoDescription: category.seoDescription || "",
+      seoKeywords: category.seoKeywords?.split(",").map((k) => k.trim()) || [],
+      detailTitle: category.detailTitle || "",
+      detailSubtitle: category.detailSubtitle || "",
+      categoryImage: category.categoryImage
         ? [
             {
-              uid: `detail-${index}`,
-              name: `detail-image-${index}.png`,
+              uid: "-1",
+              name: "category-image.png",
               status: "done",
-              url: detail.image,
-              thumbUrl: detail.image,
+              url: category.categoryImage,
+              thumbUrl: category.categoryImage,
             },
           ]
-        : [], // Ensure this is always an array
-    })),
-  };
+        : [],
+      pageImage: category.pageImage
+        ? [
+            {
+              uid: "-2",
+              name: "page-image.png",
+              status: "done",
+              url: category.pageImage,
+              thumbUrl: category.pageImage,
+            },
+          ]
+        : [],
+      details: (category.details || []).map((detail, index) => ({
+        detailDescription: detail.detailDescription || "",
+        image: detail.image
+          ? [
+              {
+                uid: `detail-${index}`,
+                name: `detail-image-${index}.png`,
+                status: "done",
+                url: detail.image,
+                thumbUrl: detail.image,
+              },
+            ]
+          : [],
+      })),
+    };
 
-  console.log("Form Values for Edit:", formValues);
-  form.setFieldsValue(formValues);
-  setSelectedCategory(category);
-  setIsEditModalVisible(true);
-};
+    console.log("Form Values for Edit:", formValues);
+    form.setFieldsValue(formValues);
+    setSelectedCategory(category);
+    setIsEditModalVisible(true);
+  };
 
   // Handle cancel for edit modal
   const handleCancelEdit = () => {
@@ -271,14 +279,16 @@ const handleEdit = (id) => {
   // Handle form submission for add
   const handleSubmit = async (values) => {
     try {
+      const slug = convertToSlug(values.shortTitle);
+
       const categoryData = {
         title: values.shortTitle,
+        slug: slug,
         image:
           values.categoryImage?.[0]?.url || "https://via.placeholder.com/150",
         pageImage:
           values.pageImage?.[0]?.url || "https://via.placeholder.com/300",
         description: values.description,
-        descriptionTitle: values.descriptionTitle,
         seoTitle: values.seoTitle,
         seoKeyword: Array.isArray(values.seoKeywords)
           ? values.seoKeywords.join(", ")
@@ -298,10 +308,10 @@ const handleEdit = (id) => {
         id: categories.length + 1,
         _id: response.data._id,
         shortTitle: response.data.title,
+        slug: response.data.slug,
         description: response.data.description,
         categoryImage: response.data.image,
         pageImage: response.data.pageImage,
-        descriptionTitle: response.data.descriptionTitle,
         seoTitle: response.data.seoTitle,
         seoDescription: response.data.seoDescription,
         seoKeywords: response.data.seoKeyword,
@@ -322,12 +332,14 @@ const handleEdit = (id) => {
   // Handle form submission for edit
   const handleEditSubmit = async (values) => {
     try {
+      const slug = convertToSlug(values.shortTitle);
+
       const categoryData = {
         title: values.shortTitle,
+        slug: slug,
         image: values.categoryImage?.[0]?.url || selectedCategory.categoryImage,
         pageImage: values.pageImage?.[0]?.url || selectedCategory.pageImage,
         description: values.description,
-        descriptionTitle: values.descriptionTitle,
         seoTitle: values.seoTitle,
         seoKeyword: Array.isArray(values.seoKeywords)
           ? values.seoKeywords.join(", ")
@@ -352,7 +364,6 @@ const handleEdit = (id) => {
         ...categoryData,
         categoryImage: categoryData.image,
         pageImage: categoryData.pageImage,
-        descriptionTitle: categoryData.descriptionTitle,
         seoTitle: categoryData.seoTitle,
         seoKeywords: categoryData.seoKeyword,
         detailTitle: categoryData.detailTitle,
@@ -386,6 +397,12 @@ const handleEdit = (id) => {
       dataIndex: "shortTitle",
       key: "shortTitle",
       render: (text) => <strong>{text}</strong>,
+    },
+    {
+      title: "Slug",
+      dataIndex: "slug",
+      key: "slug",
+      render: (text) => <code>{text}</code>,
     },
     {
       title: "Description",
@@ -499,7 +516,18 @@ const handleEdit = (id) => {
                   { required: true, message: "Please enter category title" },
                 ]}
               >
-                <Input placeholder="e.g. Electronics" />
+                <Input
+                  placeholder="e.g. Packaging Boxes"
+                  onChange={(e) => {
+                    const slug = convertToSlug(e.target.value);
+                    form.setFieldsValue({ slug });
+                  }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Slug (Auto-generated)" name="slug">
+                <Input readOnly />
               </Form.Item>
             </Col>
           </Row>
@@ -575,14 +603,6 @@ const handleEdit = (id) => {
           >
             <Input.TextArea rows={3} placeholder="SEO meta description" />
           </Form.Item>
-
-          {/* <Form.Item
-            label="SEO Keywords"
-            name="seoKeywords"
-            rules={[{ required: true, message: "Please enter SEO keywords" }]}
-          >
-            <Input placeholder="e.g. electronics, gadgets, smart devices" />
-          </Form.Item> */}
 
           <Row gutter={16}>
             <Col span={12}>
@@ -664,7 +684,8 @@ const handleEdit = (id) => {
                             cloudName={cloudName}
                             listType="picture-card"
                             fileList={
-                              form.getFieldValue(["details", name, "image"]) || []
+                              form.getFieldValue(["details", name, "image"]) ||
+                              []
                             }
                             onUploadSuccess={(data) =>
                               handleUploadSuccess(
@@ -721,7 +742,18 @@ const handleEdit = (id) => {
                     { required: true, message: "Please enter category title" },
                   ]}
                 >
-                  <Input placeholder="e.g. Electronics" />
+                  <Input
+                    placeholder="e.g. Electronics"
+                    onChange={(e) => {
+                      const slug = convertToSlug(e.target.value);
+                      form.setFieldsValue({ slug });
+                    }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="Slug (Auto-generated)" name="slug">
+                  <Input readOnly />
                 </Form.Item>
               </Col>
             </Row>
@@ -753,7 +785,11 @@ const handleEdit = (id) => {
                     listType="picture-card"
                     fileList={form.getFieldValue("categoryImage") || []}
                     onUploadSuccess={(data) =>
-                      handleUploadSuccess("categoryImage", data, "categoryImage")
+                      handleUploadSuccess(
+                        "categoryImage",
+                        data,
+                        "categoryImage"
+                      )
                     }
                   />
                 </Form.Item>
@@ -797,14 +833,6 @@ const handleEdit = (id) => {
             >
               <Input.TextArea rows={3} placeholder="SEO meta description" />
             </Form.Item>
-
-            {/* <Form.Item
-              label="SEO Keywords"
-              name="seoKeywords"
-              rules={[{ required: true, message: "Please enter keywords" }]}
-            >
-              <Input placeholder="e.g. electronics, gadgets, smart devices" />
-            </Form.Item> */}
 
             <Row gutter={16}>
               <Col span={12}>
@@ -886,8 +914,11 @@ const handleEdit = (id) => {
                               uploadPreset={uploadPreset}
                               listType="picture-card"
                               fileList={
-                                form.getFieldValue(["details", name, "image"]) ||
-                                []
+                                form.getFieldValue([
+                                  "details",
+                                  name,
+                                  "image",
+                                ]) || []
                               }
                               onUploadSuccess={(data) =>
                                 handleUploadSuccess(
@@ -945,6 +976,12 @@ const handleEdit = (id) => {
                 <h4>Category Title</h4>
                 <p>{selectedCategory.shortTitle}</p>
               </Col>
+              <Col span={12}>
+                <h4>Slug</h4>
+                <p>
+                  <code>{selectedCategory.slug}</code>
+                </p>
+              </Col>
             </Row>
 
             <h4>Description</h4>
@@ -974,9 +1011,6 @@ const handleEdit = (id) => {
 
             <h4>SEO Description</h4>
             <p>{selectedCategory.seoDescription}</p>
-
-            {/* <h4>SEO Keywords</h4>
-            <p>{selectedCategory.seoKeywords}</p> */}
 
             <Row gutter={16}>
               <Col span={12}>
@@ -1048,7 +1082,9 @@ const handleEdit = (id) => {
                       preview={false}
                       style={{ borderRadius: 4 }}
                     />
-                    <span>{category.shortTitle}</span>
+                    <span>
+                      {category.shortTitle} (<code>{category.slug}</code>)
+                    </span>
                   </Space>
                 </Col>
                 <Col>

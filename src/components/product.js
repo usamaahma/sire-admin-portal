@@ -42,7 +42,7 @@ const modules = {
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState(null);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
@@ -50,6 +50,39 @@ const Products = () => {
 
   const cloudName = "dxhpud7sx";
   const uploadPreset = "sireprinting";
+
+  // Utility function to generate slug
+  const generateSlug = (
+    categoryId,
+    subcategoryId,
+    productTitle,
+    variantTitle = null
+  ) => {
+    const category = categories.find((cat) => cat._id === categoryId);
+    const subcategory = subcategories.find((sub) => sub._id === subcategoryId);
+
+    const categorySlug = category
+      ? (category.title || category.name || "")
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+      : "";
+    const subcategorySlug = subcategory
+      ? (subcategory.title || subcategory.name || "")
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+      : "";
+    const productSlug = productTitle
+      ? productTitle.toLowerCase().replace(/\s+/g, "-")
+      : "";
+    const variantSlug = variantTitle
+      ? variantTitle.toLowerCase().replace(/\s+/g, "-")
+      : "";
+
+    if (variantTitle) {
+      return `${categorySlug}/${subcategorySlug}/${productSlug}/${variantSlug}`;
+    }
+    return `${categorySlug}/${subcategorySlug}/${productSlug}`;
+  };
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -130,6 +163,11 @@ const Products = () => {
       dataIndex: "price",
       key: "price",
       render: (price) => `$${price}`,
+    },
+    {
+      title: "Slug",
+      dataIndex: "slug",
+      key: "slug",
     },
     {
       title: "Action",
@@ -226,6 +264,13 @@ const Products = () => {
       };
     }
 
+    // Generate product slug
+    const productSlug = generateSlug(
+      values.categories?.[0],
+      values.subcategories?.[0],
+      values.title
+    );
+
     const formattedVariants =
       values.variants?.map((variant) => ({
         variantTitle: variant.variantTitle,
@@ -234,6 +279,12 @@ const Products = () => {
         salePrice: variant.salePrice,
         seoTitle: variant.seoTitle,
         seoDescription: variant.seoDescription,
+        slug: generateSlug(
+          values.categories?.[0],
+          values.subcategories?.[0],
+          values.title,
+          variant.variantTitle
+        ),
         dimensions: {
           length: variant.dimensions?.length || 0,
           width: variant.dimensions?.width || 0,
@@ -297,6 +348,7 @@ const Products = () => {
         : [],
       ...(values.salePrice && { salePrice: values.salePrice }),
       ...(salePriceEffectiveDate && { salePriceEffectiveDate }),
+      slug: productSlug,
       variants: formattedVariants,
       brand: values.brand,
       condition: values.condition,
@@ -391,6 +443,7 @@ const Products = () => {
           ...variant,
           seoTitle: variant.seoTitle,
           seoDescription: variant.seoDescription,
+          slug: variant.slug,
           dimensions: {
             length: variant.dimensions?.length || 0,
             width: variant.dimensions?.width || 0,
@@ -585,7 +638,19 @@ const Products = () => {
                 { required: true, message: "Please input product title!" },
               ]}
             >
-              <Input placeholder="Enter product title" />
+              <Input
+                placeholder="Enter product title"
+                onChange={(e) => {
+                  const title = e.target.value;
+                  const values = form.getFieldsValue();
+                  const slug = generateSlug(
+                    values.categories?.[0],
+                    values.subcategories?.[0],
+                    title
+                  );
+                  console.log("Generated product slug:", slug);
+                }}
+              />
             </Form.Item>
 
             <Form.Item
@@ -617,6 +682,18 @@ const Products = () => {
                     optionLabelProp="label"
                     showArrow
                     style={{ width: "100%" }}
+                    onChange={(value) => {
+                      const values = form.getFieldsValue();
+                      const slug = generateSlug(
+                        value[0],
+                        values.subcategories?.[0],
+                        values.title
+                      );
+                      console.log(
+                        "Generated product slug on category change:",
+                        slug
+                      );
+                    }}
                   >
                     {categories.map((category) => (
                       <Option
@@ -655,6 +732,18 @@ const Products = () => {
                     optionLabelProp="label"
                     showArrow
                     style={{ width: "100%" }}
+                    onChange={(value) => {
+                      const values = form.getFieldsValue();
+                      const slug = generateSlug(
+                        values.categories?.[0],
+                        value[0],
+                        values.title
+                      );
+                      console.log(
+                        "Generated product slug on subcategory change:",
+                        slug
+                      );
+                    }}
                   >
                     {subcategories.map((subcategory) => (
                       <Option
@@ -953,7 +1042,27 @@ const Products = () => {
                               },
                             ]}
                           >
-                            <Input placeholder="e.g., Large Box" />
+                            <Input
+                              placeholder="e.g., Large Box"
+                              onChange={(e) => {
+                                const variantTitle = e.target.value;
+                                const values = form.getFieldsValue();
+                                const slug = generateSlug(
+                                  values.categories?.[0],
+                                  values.subcategories?.[0],
+                                  values.title,
+                                  variantTitle
+                                );
+                                console.log(
+                                  `Generated variant slug [${name}]:`,
+                                  slug
+                                );
+                                form.setFieldValue(
+                                  ["variants", name, "slug"],
+                                  slug
+                                );
+                              }}
+                            />
                           </Form.Item>
                         </Col>
                       </Row>
@@ -967,6 +1076,14 @@ const Products = () => {
                           rows={2}
                           placeholder="Description for this variant"
                         />
+                      </Form.Item>
+
+                      <Form.Item
+                        {...restField}
+                        name={[name, "slug"]}
+                        label="Variant Slug"
+                      >
+                        <Input disabled />
                       </Form.Item>
 
                       <Row gutter={16}>
