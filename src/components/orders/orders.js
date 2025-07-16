@@ -18,6 +18,7 @@ import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { orders, user } from "../../utils/axios";
 import CloudinaryUploader from "../cloudinary/CloudinaryUploader";
 import "./orders.css";
+import InvoiceGenerator from "./invoicegenerator";
 
 const { Option } = Select;
 
@@ -48,6 +49,7 @@ function Orders() {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Cloudinary configuration
   const cloudName = "dxhpud7sx";
@@ -510,7 +512,7 @@ function Orders() {
               streetAddress: "",
               city: "",
               province: "",
-              zip朝鮮: "",
+              zip: "",
               country: "",
             },
           }}
@@ -614,25 +616,37 @@ function Orders() {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="invoice"
-                label="Invoice Image"
-                valuePropName="fileList"
-                getValueFromEvent={(e) => {
-                  if (!e || !e.fileList) return [];
-                  return Array.isArray(e.fileList) ? e.fileList : [];
-                }}
-              >
-                <CloudinaryUploader
-                  uploadPreset={uploadPreset}
-                  cloudName={cloudName}
-                  listType="picture-card"
-                  fileList={form.getFieldValue("invoice") || []}
-                  onUploadSuccess={(data) =>
-                    handleUploadSuccess(data, "invoice", form)
-                  }
-                />
-              </Form.Item>
+              
+<Form.Item name="invoice" label="Invoice">
+  <Button type="primary" onClick={() => setIsModalOpen(true)}>
+    Generate Invoice
+  </Button>
+
+  {form.getFieldValue("invoice") && (
+    <div style={{ marginTop: 10 }}>
+      <img
+        src={form.getFieldValue("invoice")}
+        alt="Invoice Preview"
+        style={{ maxWidth: "200px", border: "1px solid #ddd" }}
+      />
+    </div>
+  )}
+
+  <Modal
+    open={isModalOpen}
+    onCancel={() => setIsModalOpen(false)}
+    footer={null}
+    destroyOnClose
+    width={600}
+  >
+    <InvoiceGenerator
+      onComplete={(invoiceUrl) => {
+        form.setFieldsValue({ invoice: invoiceUrl });
+        setIsModalOpen(false);
+      }}
+    />
+  </Modal>
+</Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
