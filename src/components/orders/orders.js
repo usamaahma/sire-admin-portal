@@ -49,7 +49,8 @@ function Orders() {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateInvoiceModalOpen, setIsCreateInvoiceModalOpen] = useState(false);
+  const [isEditInvoiceModalOpen, setIsEditInvoiceModalOpen] = useState(false);
 
   // Cloudinary configuration
   const cloudName = "dxhpud7sx";
@@ -90,7 +91,6 @@ function Orders() {
     setLoading(true);
     try {
       const response = await orders.get(`/user/${userId}`);
-      console.log("Orders Response:", response.data); // Log API response
       setSelectedUserOrders(response.data);
       setSelectedUserId(userId);
       setIsOrdersModalOpen(true);
@@ -105,18 +105,11 @@ function Orders() {
   // Handle Cloudinary upload success
   const handleUploadSuccess = (data, formFieldName, formInstance) => {
     if (Array.isArray(data)) {
-      formInstance.setFieldsValue({ [formFieldName]: data });
+      formInstance.setFieldsValue({ [formFieldName]: data[0]?.url || data[0] });
     } else if (data?.url) {
-      const newFileList = [
-        {
-          uid: data.uid || `-${Date.now()}`,
-          name: data.name || "uploaded-file",
-          status: data.status || "done",
-          url: data.url,
-          thumbUrl: data.url,
-        },
-      ];
-      formInstance.setFieldsValue({ [formFieldName]: newFileList });
+      formInstance.setFieldsValue({ [formFieldName]: data.url });
+    } else if (typeof data === 'string') {
+      formInstance.setFieldsValue({ [formFieldName]: data });
     } else {
       message.error("File upload failed!");
     }
@@ -131,17 +124,16 @@ function Orders() {
         material: values.material,
         quantity: values.quantity,
         size: values.size,
-        file: values.file?.[0]?.url || "",
+        file: values.file || "",
         price: values.price,
         status: values.status,
         shippedvia: values.shippedvia || "",
         trackingid: values.trackingid || "",
         userId: values.userId,
-        invoice: values.invoice?.[0]?.url || "",
+        invoice: values.invoice || "",
         approvedStatus: values.approvedStatus,
         shippingAddress: [values.shippingAddress],
       };
-      console.log("Create Order Payload:", orderData); // Log payload
       await orders.post("/", orderData);
       setIsCreateModalOpen(false);
       form.resetFields();
@@ -160,25 +152,18 @@ function Orders() {
 
   // Handle edit order
   const handleEditOrder = (order) => {
-    console.log("Order to Edit:", order); // Log order to inspect
     setCurrentOrder(order);
     editForm.setFieldsValue({
       product: order.product || "",
       material: order.material || "",
       quantity: order.quantity || 1,
       size: order.size || { length: 0, width: 0, height: 0, unit: "in" },
-      file:
-        typeof order.file === "string" && order.file
-          ? [{ uid: "-1", name: "file", status: "done", url: order.file }]
-          : [],
+      file: order.file || "",
       price: order.price || 0,
       status: order.status || "Pending",
       shippedvia: order.shippedvia || "",
       trackingid: order.trackingid || "",
-      invoice:
-        typeof order.invoice === "string" && order.invoice
-          ? [{ uid: "-2", name: "invoice", status: "done", url: order.invoice }]
-          : [],
+      invoice: order.invoice || "",
       approvedStatus: order.approvedStatus || "Pending",
       shippingAddress:
         Array.isArray(order.shippingAddress) && order.shippingAddress.length > 0
@@ -206,12 +191,12 @@ function Orders() {
         material: values.material,
         quantity: values.quantity,
         size: values.size,
-        file: values.file?.[0]?.url || currentOrder.file || "",
+        file: values.file || currentOrder.file || "",
         price: values.price,
         status: values.status,
         shippedvia: values.shippedvia || "",
         trackingid: values.trackingid || "",
-        invoice: values.invoice?.[0]?.url || currentOrder.invoice || "",
+        invoice: values.invoice || currentOrder.invoice || "",
         approvedStatus: values.approvedStatus,
         shippingAddress: values.shippingAddress
           ? [values.shippingAddress]
@@ -228,7 +213,6 @@ function Orders() {
               },
             ],
       };
-      console.log("Update Order Payload:", orderData); // Log payload
       await orders.patch(`/${currentOrder._id}`, orderData);
       setIsEditModalOpen(false);
       editForm.resetFields();
@@ -497,13 +481,13 @@ function Orders() {
             material: "",
             quantity: 1,
             size: { length: 0, width: 0, height: 0, unit: "in" },
-            file: [],
+            file: "",
             price: 0,
             status: "Pending",
             shippedvia: "",
             trackingid: "",
             userId: selectedUserId || "",
-            invoice: [],
+            invoice: "",
             approvedStatus: "Pending",
             shippingAddress: {
               name: "",
@@ -598,55 +582,56 @@ function Orders() {
               <Form.Item
                 name="file"
                 label="File"
-                valuePropName="fileList"
-                getValueFromEvent={(e) => {
-                  if (!e || !e.fileList) return [];
-                  return Array.isArray(e.fileList) ? e.fileList : [];
-                }}
               >
                 <CloudinaryUploader
                   uploadPreset={uploadPreset}
                   cloudName={cloudName}
                   listType="picture-card"
-                  fileList={form.getFieldValue("file") || []}
-                  onUploadSuccess={(data) =>
-                    handleUploadSuccess(data, "file", form)
-                  }
+                  fileList={form.getFieldValue("file") ? [{
+                    uid: '-1',
+                    name: 'file',
+                    status: 'done',
+                    url: form.getFieldValue("file")
+                  }] : []}
+                  onUploadSuccess={(data) => handleUploadSuccess(data, "file", form)}
                 />
               </Form.Item>
             </Col>
             <Col span={12}>
-              
-<Form.Item name="invoice" label="Invoice">
-  <Button type="primary" onClick={() => setIsModalOpen(true)}>
-    Generate Invoice
-  </Button>
+              <Form.Item name="invoice" label="Invoice">
+                <Button 
+                  type="primary" 
+                  onClick={() => setIsCreateInvoiceModalOpen(true)}
+                >
+                  Generate Invoice
+                </Button>
 
-  {form.getFieldValue("invoice") && (
-    <div style={{ marginTop: 10 }}>
-      <img
-        src={form.getFieldValue("invoice")}
-        alt="Invoice Preview"
-        style={{ maxWidth: "200px", border: "1px solid #ddd" }}
-      />
-    </div>
-  )}
+                {form.getFieldValue("invoice") && (
+                  <div style={{ marginTop: 10 }}>
+                    <img
+                      src={form.getFieldValue("invoice")}
+                      alt="Invoice Preview"
+                      style={{ maxWidth: "200px", border: "1px solid #ddd" }}
+                    />
+                  </div>
+                )}
 
-  <Modal
-    open={isModalOpen}
-    onCancel={() => setIsModalOpen(false)}
-    footer={null}
-    destroyOnClose
-    width={600}
-  >
-    <InvoiceGenerator
-      onComplete={(invoiceUrl) => {
-        form.setFieldsValue({ invoice: invoiceUrl });
-        setIsModalOpen(false);
-      }}
-    />
-  </Modal>
-</Form.Item>
+                <Modal
+                  open={isCreateInvoiceModalOpen}
+                  onCancel={() => setIsCreateInvoiceModalOpen(false)}
+                  footer={null}
+                  destroyOnClose
+                  width={600}
+                >
+                  <InvoiceGenerator
+                    orderData={form.getFieldsValue()}
+                    onComplete={(invoiceUrl) => {
+                      form.setFieldsValue({ invoice: invoiceUrl });
+                      setIsCreateInvoiceModalOpen(false);
+                    }}
+                  />
+                </Modal>
+              </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
@@ -897,42 +882,55 @@ function Orders() {
               <Form.Item
                 name="file"
                 label="File"
-                valuePropName="fileList"
-                getValueFromEvent={(e) => {
-                  if (!e || !e.fileList) return [];
-                  return Array.isArray(e.fileList) ? e.fileList : [];
-                }}
               >
                 <CloudinaryUploader
                   uploadPreset={uploadPreset}
                   cloudName={cloudName}
                   listType="picture-card"
-                  fileList={editForm.getFieldValue("file") || []}
-                  onUploadSuccess={(data) =>
-                    handleUploadSuccess(data, "file", editForm)
-                  }
+                  fileList={editForm.getFieldValue("file") ? [{
+                    uid: '-1',
+                    name: 'file',
+                    status: 'done',
+                    url: editForm.getFieldValue("file")
+                  }] : []}
+                  onUploadSuccess={(data) => handleUploadSuccess(data, "file", editForm)}
                 />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="invoice"
-                label="Invoice Image"
-                valuePropName="fileList"
-                getValueFromEvent={(e) => {
-                  if (!e || !e.fileList) return [];
-                  return Array.isArray(e.fileList) ? e.fileList : [];
-                }}
-              >
-                <CloudinaryUploader
-                  uploadPreset={uploadPreset}
-                  cloudName={cloudName}
-                  listType="picture-card"
-                  fileList={editForm.getFieldValue("invoice") || []}
-                  onUploadSuccess={(data) =>
-                    handleUploadSuccess(data, "invoice", editForm)
-                  }
-                />
+              <Form.Item name="invoice" label="Invoice">
+                <Button 
+                  type="primary" 
+                  onClick={() => setIsEditInvoiceModalOpen(true)}
+                >
+                  Generate Invoice
+                </Button>
+
+                {editForm.getFieldValue("invoice") && (
+                  <div style={{ marginTop: 10 }}>
+                    <img
+                      src={editForm.getFieldValue("invoice")}
+                      alt="Invoice Preview"
+                      style={{ maxWidth: "200px", border: "1px solid #ddd" }}
+                    />
+                  </div>
+                )}
+
+                <Modal
+                  open={isEditInvoiceModalOpen}
+                  onCancel={() => setIsEditInvoiceModalOpen(false)}
+                  footer={null}
+                  destroyOnClose
+                  width={600}
+                >
+                  <InvoiceGenerator
+                    orderData={editForm.getFieldsValue()}
+                    onComplete={(invoiceUrl) => {
+                      editForm.setFieldsValue({ invoice: invoiceUrl });
+                      setIsEditInvoiceModalOpen(false);
+                    }}
+                  />
+                </Modal>
               </Form.Item>
             </Col>
           </Row>

@@ -1,74 +1,135 @@
-import React, { useRef, useState } from "react";
-import { Form, Input, Button, Card, InputNumber } from "antd";
-import jsPDF from "jspdf";
+import { useRef, useState, useEffect } from "react";
+import { Form, Input, Button, Card, InputNumber, message, Row, Col } from "antd";
 import html2canvas from "html2canvas";
+import './invoicegenerator.css';
 
-const InvoiceGenerator = () => {
+const InvoiceGenerator = ({ orderData = {}, onComplete }) => {
   const invoiceRef = useRef();
   const [formData, setFormData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [form] = Form.useForm();
+
+  const cloudName = "dxhpud7sx";
+  const uploadPreset = "sireprinting";
+
+  useEffect(() => {
+    if (orderData) {
+      form.setFieldsValue(orderData);
+    }
+  }, [orderData, form]);
 
   const onFinish = (values) => {
-    setFormData({
+    const completeData = {
       ...values,
       date: new Date().toLocaleDateString(),
-      invoiceNumber: `INV-${Math.floor(1000 + Math.random() * 9000)}`
-    });
+      invoiceNumber: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
+      total: values.quantity * values.price,
+    };
+    setFormData(completeData);
+
+    setTimeout(() => {
+      generateAndUploadInvoice();
+    }, 100);
   };
 
-  const generatePDF = async () => {
-    const element = invoiceRef.current;
-    const canvas = await html2canvas(element);
-    const imgData = canvas.toDataURL("image/png");
+  const uploadToCloudinary = async (imageData) => {
+    const blob = await fetch(imageData).then(res => res.blob());
+    const formData = new FormData();
+    formData.append("file", blob);
+    formData.append("upload_preset", uploadPreset);
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, {
+      method: "POST",
+      body: formData,
+    });
+    const data = await response.json();
+    return data.secure_url;
+  };
 
-    const pdf = new jsPDF("p", "mm", "a4");
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+  const generateAndUploadInvoice = async () => {
+    try {
+      setLoading(true);
+      const canvas = await html2canvas(invoiceRef.current);
+      const imageData = canvas.toDataURL("image/png");
+      const cloudinaryUrl = await uploadToCloudinary(imageData);
 
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`${formData?.invoiceNumber || "invoice"}.pdf`);
+      message.success("Invoice uploaded to Cloudinary!");
+
+      if (onComplete) {
+        onComplete(cloudinaryUrl);
+      }
+    } catch (err) {
+      message.error("Upload failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <Card title="Admin Invoice Form" style={{ marginBottom: 20 }}>
-        <Form layout="vertical" onFinish={onFinish}>
-          <Form.Item name="customerName" label="Customer Name" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="product" label="Product" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="quantity" label="Quantity" rules={[{ required: true }]}>
-            <InputNumber min={1} />
-          </Form.Item>
-          <Form.Item name="price" label="Price (PKR)" rules={[{ required: true }]}>
-            <InputNumber min={0} />
-          </Form.Item>
+    <div className="invoice-container">
+      <Card title="Invoice Details">
+        <Form form={form} layout="vertical" onFinish={onFinish}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="fromName" label="From - Name" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item name="fromPhone" label="From - Phone" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item name="fromAddress" label="From - Address" rules={[{ required: true }]}><Input /></Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="toName" label="To - Name" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item name="toPhone" label="To - Phone" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item name="toAddress" label="To - Address" rules={[{ required: true }]}><Input /></Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="product" label="Product" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="quantity" label="Quantity" rules={[{ required: true }]}><InputNumber min={1} style={{ width: "100%" }} /></Form.Item>
+          <Form.Item name="price" label="Price (EUR)" rules={[{ required: true }]}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
+          <Form.Item name="note" label="Note"><Input /></Form.Item>
+          <Form.Item name="bankName" label="Bank Name" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="bankNumber" label="Bank Number" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="email" label="Email" rules={[{ required: true }]}><Input /></Form.Item>
+
           <Form.Item>
-            <Button type="primary" htmlType="submit">Generate Invoice Preview</Button>
+            <Button type="primary" htmlType="submit" loading={loading}>
+              {loading ? "Uploading..." : "Generate & Upload Invoice"}
+            </Button>
           </Form.Item>
         </Form>
       </Card>
 
       {formData && (
-        <>
-          <Card title="Invoice Preview" ref={invoiceRef} style={{ width: "100%", marginBottom: 20 }}>
-            <h2 style={{ textAlign: "center" }}>INVOICE</h2>
-            <p><strong>Invoice No:</strong> {formData.invoiceNumber}</p>
-            <p><strong>Date:</strong> {formData.date}</p>
-            <p><strong>Customer:</strong> {formData.customerName}</p>
-            <hr />
-            <p><strong>Product:</strong> {formData.product}</p>
-            <p><strong>Quantity:</strong> {formData.quantity}</p>
-            <p><strong>Price (PKR):</strong> {formData.price}</p>
-            <p><strong>Total:</strong> {formData.quantity * formData.price} PKR</p>
-          </Card>
-
-          <Button type="primary" onClick={generatePDF}>
-            Download PDF
-          </Button>
-        </>
+        <div
+          ref={invoiceRef}
+          className="invoice-preview"
+          style={{ padding: 20, marginTop: 20, background: "#fff" }}
+        >
+          <h2>Invoice</h2>
+          <p><strong>Invoice No:</strong> {formData.invoiceNumber}</p>
+          <p><strong>Date:</strong> {formData.date}</p>
+          <hr />
+          <p><strong>From:</strong><br />{formData.fromName}<br />{formData.fromPhone}<br />{formData.fromAddress}</p>
+          <p><strong>To:</strong><br />{formData.toName}<br />{formData.toPhone}<br />{formData.toAddress}</p>
+          <table border="1" cellPadding="8" width="100%" style={{ marginTop: 10 }}>
+            <thead>
+              <tr>
+                <th>Product</th><th>Qty</th><th>Price</th><th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{formData.product}</td>
+                <td>{formData.quantity}</td>
+                <td>EUR {formData.price}</td>
+                <td>EUR {formData.total}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p><strong>Note:</strong> {formData.note}</p>
+          <p><strong>Bank:</strong> {formData.bankName}</p>
+          <p><strong>Account:</strong> {formData.bankNumber}</p>
+          <p><strong>Email:</strong> {formData.email}</p>
+          <h3 style={{ textAlign: "center", marginTop: 20 }}>Thank You!</h3>
+        </div>
       )}
     </div>
   );
