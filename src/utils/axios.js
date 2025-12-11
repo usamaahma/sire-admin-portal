@@ -71,6 +71,9 @@ const orders = axios.create({
 const samplerequests = axios.create({
   baseURL: `${baseURL}/samplerequests`,
 });
+const pagetext = axios.create({
+  baseURL: `${baseURL}/pagetext`,
+});
 // Generic request interceptor for all instances
 const requestInterceptor = (req) => {
   // Optionally add authorization headers or custom logic
@@ -109,6 +112,7 @@ dieline.interceptors.request.use(requestInterceptor, errorInterceptor);
 orders.interceptors.request.use(requestInterceptor, errorInterceptor);
 user.interceptors.request.use(requestInterceptor, errorInterceptor);
 samplerequests.interceptors.request.use(requestInterceptor, errorInterceptor);
+pagetext.interceptors.request.use(requestInterceptor, errorInterceptor);
 
 export {
   signup,
@@ -132,4 +136,5 @@ export {
   orders,
   user,
   samplerequests,
+  pagetext,
 };

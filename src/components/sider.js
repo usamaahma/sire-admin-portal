@@ -48,6 +48,7 @@ import Newsletter from "./newsletter/newsletter";
 import Dielineform from "./dieline-form/dielineform";
 import Orders from "./orders/orders";
 import Samplerequests from "./orders/samplerequests";
+import TextContentAdmin from "./pagetext";
 
 const AdminPortal = () => {
   const [activeContent, setActiveContent] = useState("Dashboard");
@@ -94,6 +95,10 @@ const AdminPortal = () => {
         return <Newsletter />;
       case "Dieline Form":
         return <Dielineform />;
+      case "Page Text":
+        return <TextContentAdmin />;
+
+        
       case "Blog Management":
         return (
           <div className="blog-content-container">
@@ -182,6 +187,9 @@ const AdminPortal = () => {
     { name: "Terms and Conditions", icon: <FileTextOutlined /> },
     { name: "Privacy Policy", icon: <LockOutlined /> },
     { name: "Contact Us", icon: <FormOutlined /> },
+    { name: "Page Text", icon: <FormOutlined /> },
+
+
   ];
 
   return (

@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
 import {
   Table,
   Button,
@@ -38,6 +40,39 @@ const convertToSlug = (text) => {
     .replace(/ +/g, "-");
 };
 
+// Utility function to strip HTML tags
+const stripHtml = (html) => {
+  if (!html) return "";
+  const tmp = document.createElement("DIV");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
+};
+
+// ReactQuill modules configuration
+const modules = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ["bold", "italic", "underline", "strike"],
+    [{ list: "ordered" }, { list: "bullet" }],
+    ["link", "image"],
+    ["clean"],
+    [{ align: [] }],
+  ],
+};
+
+const formats = [
+  "header",
+  "bold",
+  "italic",
+  "underline",
+  "strike",
+  "list",
+  "bullet",
+  "link",
+  "image",
+  "align",
+];
+
 const Categories = ({ setActiveContent }) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -50,15 +85,15 @@ const Categories = ({ setActiveContent }) => {
   const [form] = Form.useForm();
 
   // Cloudinary configuration
-  const cloudName = "dxhpud7sx"; // Replace with your Cloudinary cloud name
-  const uploadPreset = "sireprinting"; // Replace with your Cloudinary upload preset
+  const cloudName = "dxhpud7sx";
+  const uploadPreset = "sireprinting";
 
   // Fetch categories on mount
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const response = await category.get("/");
-        console.log("API Response:", response.data); // Debug API data
+        console.log("API Response:", response.data);
         const formattedData = response.data.map((item, index) => ({
           id: index + 1,
           _id: item._id,
@@ -69,7 +104,7 @@ const Categories = ({ setActiveContent }) => {
           pageImage: item.pageImage,
           seoTitle: item.seoTitle,
           seoDescription: item.seoDescription,
-          seoKeywords: item.seoKeyword,
+          // seoKeywords: item.seoKeyword,
           detailTitle: item.detailTitle,
           detailSubtitle: item.detailSubtitle,
           details: item.details || [],
@@ -109,7 +144,7 @@ const Categories = ({ setActiveContent }) => {
       description: category.description || "",
       seoTitle: category.seoTitle || "",
       seoDescription: category.seoDescription || "",
-      seoKeywords: category.seoKeywords?.split(",").map((k) => k.trim()) || [],
+      // seoKeywords: category.seoKeywords?.split(",").map((k) => k.trim()) || [],
       detailTitle: category.detailTitle || "",
       detailSubtitle: category.detailSubtitle || "",
       categoryImage: category.categoryImage
@@ -279,29 +314,29 @@ const Categories = ({ setActiveContent }) => {
   // Handle form submission for add
   const handleSubmit = async (values) => {
     try {
-      const slug = convertToSlug(values.shortTitle);
-
       const categoryData = {
         title: values.shortTitle,
-        slug: slug,
+        slug: values.slug,
         image:
           values.categoryImage?.[0]?.url || "https://via.placeholder.com/150",
         pageImage:
           values.pageImage?.[0]?.url || "https://via.placeholder.com/300",
         description: values.description,
         seoTitle: values.seoTitle,
-        seoKeyword: Array.isArray(values.seoKeywords)
-          ? values.seoKeywords.join(", ")
-          : values.seoKeywords,
+        // seoKeyword: Array.isArray(values.seoKeywords)
+        //   ? values.seoKeywords.join(", ")
+        //   : values.seoKeywords,
         seoDescription: values.seoDescription,
         detailTitle: values.detailTitle,
         detailSubtitle: values.detailSubtitle,
         details:
           values.details?.map((detail) => ({
-            detailDescription: detail.detailDescription,
+            detailDescription: stripHtml(detail.detailDescription) || "",
             image: detail.image?.[0]?.url || "https://via.placeholder.com/100",
           })) || [],
       };
+
+      console.log("Submitting category data:", categoryData);
 
       const response = await category.post("/", categoryData);
       const newCategory = {
@@ -314,7 +349,7 @@ const Categories = ({ setActiveContent }) => {
         pageImage: response.data.pageImage,
         seoTitle: response.data.seoTitle,
         seoDescription: response.data.seoDescription,
-        seoKeywords: response.data.seoKeyword,
+        // seoKeywords: response.data.seoKeyword,
         detailTitle: response.data.detailTitle,
         detailSubtitle: response.data.detailSubtitle,
         details: response.data.details,
@@ -332,24 +367,22 @@ const Categories = ({ setActiveContent }) => {
   // Handle form submission for edit
   const handleEditSubmit = async (values) => {
     try {
-      const slug = convertToSlug(values.shortTitle);
-
       const categoryData = {
         title: values.shortTitle,
-        slug: slug,
+        slug: values.slug,
         image: values.categoryImage?.[0]?.url || selectedCategory.categoryImage,
         pageImage: values.pageImage?.[0]?.url || selectedCategory.pageImage,
         description: values.description,
         seoTitle: values.seoTitle,
-        seoKeyword: Array.isArray(values.seoKeywords)
-          ? values.seoKeywords.join(", ")
-          : values.seoKeywords,
+        // seoKeyword: Array.isArray(values.seoKeywords)
+        //   ? values.seoKeywords.join(", ")
+        //   : values.seoKeywords,
         seoDescription: values.seoDescription,
         detailTitle: values.detailTitle,
         detailSubtitle: values.detailSubtitle,
         details:
           values.details?.map((detail, index) => ({
-            detailDescription: detail.detailDescription,
+            detailDescription: stripHtml(detail.detailDescription) || "",
             image:
               detail.image?.[0]?.url ||
               selectedCategory.details?.[index]?.image ||
@@ -365,7 +398,7 @@ const Categories = ({ setActiveContent }) => {
         categoryImage: categoryData.image,
         pageImage: categoryData.pageImage,
         seoTitle: categoryData.seoTitle,
-        seoKeywords: categoryData.seoKeyword,
+        // seoKeywords: categoryData.seoKeyword,
         detailTitle: categoryData.detailTitle,
         detailSubtitle: categoryData.detailSubtitle,
         details: categoryData.details,
@@ -504,7 +537,8 @@ const Categories = ({ setActiveContent }) => {
         open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
         footer={null}
-        width={800}
+        width={900}
+        style={{ top: 20 }}
       >
         <Form form={form} onFinish={handleSubmit} layout="vertical">
           <Row gutter={16}>
@@ -633,13 +667,13 @@ const Categories = ({ setActiveContent }) => {
             {(fields, { add, remove }) => (
               <>
                 <Divider orientation="left">
-                  Details (Description & Image)
+                  Content Sections (Rich Text Editor)
                 </Divider>
                 {fields.map(({ key, name, ...restField }) => (
                   <Card
                     key={key}
                     type="inner"
-                    title={`Detail ${key + 1}`}
+                    title={`Content Section ${key + 1}`}
                     style={{ marginBottom: 24 }}
                     extra={
                       <Button
@@ -655,17 +689,21 @@ const Categories = ({ setActiveContent }) => {
                         <Form.Item
                           {...restField}
                           name={[name, "detailDescription"]}
-                          label="Detail Description"
+                          label="Content"
                           rules={[
                             {
                               required: true,
-                              message: "Please enter detail description",
+                              message: "Please enter content",
                             },
                           ]}
+                          getValueFromEvent={(value) => value}
                         >
-                          <Input.TextArea
-                            rows={4}
-                            placeholder="Detailed text about this feature or highlight"
+                          <ReactQuill
+                            modules={modules}
+                            formats={formats}
+                            theme="snow"
+                            placeholder="Enter detailed content with formatting..."
+                            style={{ height: "250px", marginBottom: "50px" }}
                           />
                         </Form.Item>
                       </Col>
@@ -673,7 +711,7 @@ const Categories = ({ setActiveContent }) => {
                         <Form.Item
                           {...restField}
                           name={[name, "image"]}
-                          label="Detail Image"
+                          label="Section Image"
                           valuePropName="fileList"
                           getValueFromEvent={(e) =>
                             Array.isArray(e) ? e : e?.fileList || []
@@ -708,7 +746,7 @@ const Categories = ({ setActiveContent }) => {
                     icon={<PlusOutlined />}
                     disabled={fields.length >= 5}
                   >
-                    Add New Detail
+                    Add New Content Section
                   </Button>
                 </Form.Item>
               </>
@@ -729,7 +767,8 @@ const Categories = ({ setActiveContent }) => {
         open={isEditModalVisible}
         onCancel={handleCancelEdit}
         footer={null}
-        width={800}
+        width={900}
+        style={{ top: 20 }}
       >
         {selectedCategory && (
           <Form form={form} onFinish={handleEditSubmit} layout="vertical">
@@ -863,13 +902,13 @@ const Categories = ({ setActiveContent }) => {
               {(fields, { add, remove }) => (
                 <>
                   <Divider orientation="left">
-                    Details (Description & Image)
+                    Content Sections (Rich Text Editor)
                   </Divider>
                   {fields.map(({ key, name, ...restField }) => (
                     <Card
                       key={key}
                       type="inner"
-                      title={`Detail ${key + 1}`}
+                      title={`Content Section ${key + 1}`}
                       style={{ marginBottom: 24 }}
                       extra={
                         <Button
@@ -885,17 +924,21 @@ const Categories = ({ setActiveContent }) => {
                           <Form.Item
                             {...restField}
                             name={[name, "detailDescription"]}
-                            label="Detail Description"
+                            label="Content"
                             rules={[
                               {
                                 required: true,
-                                message: "Please enter detail description",
+                                message: "Please enter content",
                               },
                             ]}
+                            getValueFromEvent={(value) => value}
                           >
-                            <Input.TextArea
-                              rows={4}
-                              placeholder="Detailed text about this feature or highlight"
+                            <ReactQuill
+                              modules={modules}
+                              formats={formats}
+                              theme="snow"
+                              placeholder="Enter detailed content with formatting..."
+                              style={{ height: "250px", marginBottom: "50px" }}
                             />
                           </Form.Item>
                         </Col>
@@ -903,7 +946,7 @@ const Categories = ({ setActiveContent }) => {
                           <Form.Item
                             {...restField}
                             name={[name, "image"]}
-                            label="Detail Image"
+                            label="Section Image"
                             valuePropName="fileList"
                             getValueFromEvent={(e) =>
                               Array.isArray(e) ? e : e?.fileList || []
@@ -941,7 +984,7 @@ const Categories = ({ setActiveContent }) => {
                       icon={<PlusOutlined />}
                       disabled={fields.length >= 5}
                     >
-                      Add New Detail
+                      Add New Content Section
                     </Button>
                   </Form.Item>
                 </>
@@ -1023,17 +1066,22 @@ const Categories = ({ setActiveContent }) => {
               </Col>
             </Row>
 
-            <Divider orientation="left">Details</Divider>
+            <Divider orientation="left">Content Sections</Divider>
             {selectedCategory.details?.map((detail, index) => (
               <Card
                 key={index}
                 type="inner"
-                title={`Detail ${index + 1}`}
+                title={`Content Section ${index + 1}`}
                 style={{ marginBottom: 24 }}
               >
-                <h4>Detail Description</h4>
-                <p>{detail.detailDescription}</p>
-                <h4>Detail Image</h4>
+                <h4>Content</h4>
+                <div
+                  className="rich-text-content"
+                  dangerouslySetInnerHTML={{
+                    __html: detail.detailDescription || "",
+                  }}
+                />
+                <h4>Section Image</h4>
                 <Image
                   src={detail.image}
                   width={100}

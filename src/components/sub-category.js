@@ -31,7 +31,7 @@ function Subcategory() {
     detailTitle: "",
     detailSubtitle: "",
     seoTitle: "",
-    seoKeyword: "",
+    // seoKeyword: "",
     seoDescription: "",
     details: [{ detailDescription: "", images: [] }],
   });
@@ -92,7 +92,7 @@ function Subcategory() {
       detailTitle: "",
       detailSubtitle: "",
       seoTitle: "",
-      seoKeyword: "",
+      // seoKeyword: "",
       seoDescription: "",
       details: [{ detailDescription: "", images: [] }],
     });
@@ -214,7 +214,7 @@ function Subcategory() {
       detailTitle: subcatToEdit.detailTitle,
       detailSubtitle: subcatToEdit.detailSubtitle,
       seoTitle: subcatToEdit.seoTitle,
-      seoKeyword: subcatToEdit.seoKeyword,
+      // seoKeyword: subcatToEdit.seoKeyword,
       seoDescription: subcatToEdit.seoDescription,
       details: (subcatToEdit.details || []).map((detail, i) => ({
         detailDescription: detail.detailDescription,
@@ -424,7 +424,7 @@ function Subcategory() {
               />
             </div>
 
-            <div className="form-group">
+            {/* <div className="form-group">
               <label>SEO Keywords</label>
               <input
                 type="text"
@@ -433,7 +433,7 @@ function Subcategory() {
                 onChange={handleChange}
                 placeholder="Enter keywords separated by commas"
               />
-            </div>
+            </div> */}
 
             <div className="form-group">
               <label>SEO Description</label>
